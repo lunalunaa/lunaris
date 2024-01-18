@@ -10,7 +10,11 @@ use tock_registers::{
 pub const CONSOLE: usize = 1;
 pub const MARKLIN: usize = 2;
 
+#[cfg(feature = "lab")]
+static MMIO_BASE: usize = 0xFE00_0000;
+#[cfg(feature = "default")]
 static MMIO_BASE: usize = 0x3F00_0000;
+
 static UART0_BASE: usize = MMIO_BASE + 0x201000;
 static UART3_BASE: usize = MMIO_BASE + 0x201600;
 static CLK_BASE: usize = MMIO_BASE + 0x3000;

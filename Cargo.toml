@@ -18,3 +18,7 @@ strip = true
 name = "lunaris"
 test = false
 bench = false
+
+[features]
+default = []
+lab = []

@@ -3,10 +3,23 @@ command = "rust-objcopy"
 args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/${@}/lunaris", "kernel.img"]
 dependencies = ["build"]
 
+[tasks.image-lab]
+command = "rust-objcopy"
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/${@}/lunaris", "kernel.img"]
+dependencies = ["build-lab"]
+
 [tasks.build]
 command = "cargo"
 args = ["build", "--${@}"]
 
-[tasks.run-qemu]
+[tasks.build-lab]
+command = "cargo"
+args = ["build", "--${@}", "--features", "lab", "--no-default-features"]
+
+
+[tasks.clean]
+run_task = "rm *.img"
+
+[tasks.qemu]
 command = "qemu-system-aarch64"
 args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img"]

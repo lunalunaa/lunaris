@@ -1,11 +1,13 @@
-[target.aarch64-unknown-none]
+[target.'cfg(feature = "default")']
 rustflags = [
-  "-C",
-  "link-arg=--script=linker.ld",
   "-C",
   "target-cpu=cortex-a53"
 ]
-
+[target.'cfg(feature = "lab")']
+rustflags = [
+  "-C",
+  "target-cpu=cortex-a72"
+]
 
 [build]
 target = "aarch64-unknown-none"
