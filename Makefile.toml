@@ -1,8 +1,19 @@
-[tasks.build]
+[tasks.image]
+command = "rust-objcopy"
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/debug/kernel", "kernel.img"]
+dependencies = ["build-debug"]
+
+[tasks.build-debug]
 command = "cargo"
 args = ["build"]
-dependencies = ["build-boot"]
+dependencies = ["clean"]
 
-[tasks.build-boot]
-command = "gcc"
-args = ["-target", "aarch64-unknown-none", "-g", "-pipe", "-static", "-ffreestanding", "-nostartfiles", "-mcpu=cortex-a72", "-static-pie", "-mstrict-align", "-fno-builtin", "-mgeneral-regs-only", "-c", "src/boot.S", "-o", "target/aarch64-unknown-none/boot.o"]
+[tasks.build-release]
+command = "cargo"
+args = ["build", "--release"]
+dependencies = ["clean"]
+
+[tasks.image-release]
+command = "rust-objcopy"
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/release/lunaris", "lunaris.img"]
+dependencies = ["build-release"]

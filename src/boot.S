@@ -59,7 +59,7 @@ el1_entry:
     ldr x14, =stackend
     mov sp, x14
     // Jump to our main() routine in C/C++
-    bl  kmain
+    bl  main
 
     // use watchdog to reboot
     mov x2, 36

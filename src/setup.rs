@@ -7,15 +7,16 @@ use tock_registers::{
     registers::{ReadOnly, ReadWrite, WriteOnly},
 };
 
-const CONSOLE: usize = 1;
-const MARKLIN: usize = 2;
+pub const CONSOLE: usize = 1;
+pub const MARKLIN: usize = 2;
 
-static MMIO_BASE: usize = 0xFE000000;
+pub static MMIO_BASE: usize = 0xFE000000;
 static UART0_BASE: usize = MMIO_BASE + 0x201000;
 static UART3_BASE: usize = MMIO_BASE + 0x201600;
 static CLK_BASE: usize = MMIO_BASE + 0x3000;
 
-fn line_uarts(line: u32) -> usize {
+#[inline(always)]
+pub fn line_uarts(line: usize) -> usize {
     if line == 1 {
         UART0_BASE
     } else {
@@ -205,7 +206,7 @@ pub struct UART {
 }
 
 impl UART {
-    pub const fn new(mmio_start_addr: usize) -> Self {
+    pub fn new(mmio_start_addr: usize) -> Self {
         Self {
             registers: Registers::new(mmio_start_addr),
         }
@@ -271,5 +272,9 @@ impl UART {
             asm::nop()
         }
         return self.putc_nowait(ch);
+    }
+
+    pub fn println(&mut self, str: &str) {
+        str.chars().for_each(|ch| self.putc(ch))
     }
 }
