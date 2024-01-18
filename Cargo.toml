@@ -12,6 +12,7 @@ tock-registers = "0.9.0"
 
 [profile.release]
 lto = true
+strip = true
 
 [[bin]]
 name = "lunaris"

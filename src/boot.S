@@ -27,9 +27,11 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
-	mrs  x0, mpidr_el1
-    and  x0, x0, #3
-    cbnz x0, exit
+	// Only proceed on the boot core. Park it otherwise.
+	mrs   x1, mpidr_el1
+    and   x1, x1, #3
+    cmp   x1, #0
+    bne   exit
 
 	// If execution reaches here, it is the boot core.
 
@@ -50,7 +52,12 @@ _start:
 	mov	sp, x0
 
 	// Jump to Rust code.
-	b	main
+	b	_kmain
+
+	// Infinitely wait for events (aka "park the core").
+.L_parking_loop:
+	wfe
+	b	.L_parking_loop
 
 exit:
     // shouldn't be reached

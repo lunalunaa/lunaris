@@ -1,19 +1,8 @@
 [tasks.image]
 command = "rust-objcopy"
-args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/debug/kernel", "kernel.img"]
-dependencies = ["build-debug"]
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/${@}/lunaris", "kernel.img"]
+dependencies = ["build"]
 
-[tasks.build-debug]
+[tasks.build]
 command = "cargo"
-args = ["build"]
-dependencies = ["clean"]
-
-[tasks.build-release]
-command = "cargo"
-args = ["build", "--release"]
-dependencies = ["clean"]
-
-[tasks.image-release]
-command = "rust-objcopy"
-args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/release/lunaris", "lunaris.img"]
-dependencies = ["build-release"]
+args = ["build", "--${@}"]

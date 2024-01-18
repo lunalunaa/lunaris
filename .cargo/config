@@ -3,7 +3,7 @@ rustflags = [
   "-C",
   "link-arg=--script=linker.ld",
   "-C",
-  "target-cpu=cortex-a72"
+  "target-cpu=cortex-a53"
 ]
 
 

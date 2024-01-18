@@ -10,19 +10,10 @@ use tock_registers::{
 pub const CONSOLE: usize = 1;
 pub const MARKLIN: usize = 2;
 
-pub static MMIO_BASE: usize = 0xFE000000;
+static MMIO_BASE: usize = 0x3F00_0000;
 static UART0_BASE: usize = MMIO_BASE + 0x201000;
 static UART3_BASE: usize = MMIO_BASE + 0x201600;
 static CLK_BASE: usize = MMIO_BASE + 0x3000;
-
-#[inline(always)]
-pub fn line_uarts(line: usize) -> usize {
-    if line == 1 {
-        UART0_BASE
-    } else {
-        UART3_BASE
-    }
-}
 
 // PL011 UART registers.
 //
@@ -201,31 +192,51 @@ impl<T> Deref for MMIODeRefWrapper<T> {
 
 type Registers = MMIODeRefWrapper<RegisterBlock>;
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum UARTLines {
+    Console,
+    Marklin,
+}
+
+impl UARTLines {
+    pub fn addr(&self) -> usize {
+        match self {
+            UARTLines::Console => UART0_BASE,
+            UARTLines::Marklin => UART3_BASE,
+        }
+    }
+}
+
 pub struct UART {
     registers: Registers,
+    line: UARTLines,
 }
 
 impl UART {
-    pub fn new(mmio_start_addr: usize) -> Self {
+    pub fn new(line: UARTLines) -> Self {
         Self {
-            registers: Registers::new(mmio_start_addr),
+            registers: Registers::new(line.addr()),
+            line,
         }
     }
 
-    pub fn init(&mut self, line: usize) {
+    pub fn init(&mut self) {
         let (baud_ival, baud_fval): (u32, u32);
 
-        if line == CONSOLE {
-            baud_ival = 26;
-            baud_fval = 2;
-        } else {
-            baud_ival = 1250;
-            baud_fval = 1;
+        match self.line {
+            UARTLines::Console => {
+                baud_ival = 26;
+                baud_fval = 2;
+            }
+            UARTLines::Marklin => {
+                baud_ival = 1250;
+                baud_fval = 1;
+            }
         }
 
         self.registers.CR.set(0);
 
-        //self.registers.ICR.write(ICR::ALL::CLEAR);
+        self.registers.ICR.write(ICR::ALL::CLEAR);
 
         self.registers.IBRD.set(baud_ival);
         self.registers.FBRD.set(baud_fval);
@@ -233,34 +244,34 @@ impl UART {
             LCR_H::WLEN::EightBit
                 + LCR_H::FEN::FifosEnabled
                 + LCR_H::PEN::ParityDisable
-                + if line == MARKLIN {
-                    LCR_H::STP2::TwoStopBits
-                } else {
-                    LCR_H::STP2::CLEAR
+                + match self.line {
+                    UARTLines::Console => LCR_H::STP2::TwoStopBits,
+                    UARTLines::Marklin => LCR_H::STP2::CLEAR,
                 },
         );
+
         self.registers
             .CR
             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
     }
 
     pub fn getc_no_wait(&self) -> char {
-        return self.registers.DR.get() as u8 as char;
+        self.registers.DR.get() as u8 as char
     }
 
     pub fn rxwaiting(&self) -> bool {
-        return self.registers.FR.is_set(FR::RXFE);
+        self.registers.FR.is_set(FR::RXFE)
     }
 
     pub fn getc(&self) -> char {
         while self.rxwaiting() {
             asm::nop()
         }
-        return self.getc_no_wait();
+        self.getc_no_wait()
     }
 
     pub fn txwaiting(&self) -> bool {
-        return self.registers.FR.is_set(FR::TXFF);
+        self.registers.FR.is_set(FR::TXFF)
     }
 
     pub fn putc_nowait(&mut self, ch: char) {
@@ -271,7 +282,7 @@ impl UART {
         while self.txwaiting() {
             asm::nop()
         }
-        return self.putc_nowait(ch);
+        self.putc_nowait(ch)
     }
 
     pub fn println(&mut self, str: &str) {
