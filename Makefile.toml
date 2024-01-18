@@ -1,0 +1,8 @@
+[tasks.build]
+command = "cargo"
+args = ["build"]
+dependencies = ["build-boot"]
+
+[tasks.build-boot]
+command = "gcc"
+args = ["-target", "aarch64-unknown-none", "-g", "-pipe", "-static", "-ffreestanding", "-nostartfiles", "-mcpu=cortex-a72", "-static-pie", "-mstrict-align", "-fno-builtin", "-mgeneral-regs-only", "-c", "src/boot.S", "-o", "target/aarch64-unknown-none/boot.o"]

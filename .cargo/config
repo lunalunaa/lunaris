@@ -1,0 +1,11 @@
+[target.aarch64-unknown-none]
+rustflags = [
+  "-C",
+  "link-arg=--script=linker.ld",
+  "-C",
+  "target-cpu=cortex-a72"
+]
+
+
+[build]
+target = "aarch64-unknown-none"
