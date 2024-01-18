@@ -6,3 +6,7 @@ dependencies = ["build"]
 [tasks.build]
 command = "cargo"
 args = ["build", "--${@}"]
+
+[tasks.run-qemu]
+command = "qemu-system-aarch64"
+args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img"]
