@@ -7,9 +7,6 @@ use tock_registers::{
     registers::{ReadOnly, ReadWrite, WriteOnly},
 };
 
-pub const CONSOLE: usize = 1;
-pub const MARKLIN: usize = 2;
-
 #[cfg(feature = "lab")]
 static MMIO_BASE: usize = 0xFE00_0000;
 #[cfg(feature = "default")]
@@ -197,42 +194,54 @@ impl<T> Deref for MMIODeRefWrapper<T> {
 type Registers = MMIODeRefWrapper<RegisterBlock>;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub enum UARTLines {
+pub enum UARTLine {
     Console,
     Marklin,
 }
 
-impl UARTLines {
+impl UARTLine {
     pub fn addr(&self) -> usize {
         match self {
-            UARTLines::Console => UART0_BASE,
-            UARTLines::Marklin => UART3_BASE,
+            UARTLine::Console => UART0_BASE,
+            UARTLine::Marklin => UART3_BASE,
         }
     }
 }
 
 pub struct UART {
     registers: Registers,
-    line: UARTLines,
+    line: UARTLine,
 }
 
 impl UART {
-    pub fn new(line: UARTLines) -> Self {
+    pub fn new(line: UARTLine) -> Self {
         Self {
             registers: Registers::new(line.addr()),
             line,
         }
     }
 
+    pub fn console() -> Self {
+        let mut uart = Self::new(UARTLine::Console);
+        uart.init();
+        return uart;
+    }
+
+    pub fn train() -> Self {
+        let mut uart = Self::new(UARTLine::Marklin);
+        uart.init();
+        return uart;
+    }
+
     pub fn init(&mut self) {
         let (baud_ival, baud_fval): (u32, u32);
 
         match self.line {
-            UARTLines::Console => {
+            UARTLine::Console => {
                 baud_ival = 26;
                 baud_fval = 2;
             }
-            UARTLines::Marklin => {
+            UARTLine::Marklin => {
                 baud_ival = 1250;
                 baud_fval = 1;
             }
@@ -249,8 +258,8 @@ impl UART {
                 + LCR_H::FEN::FifosEnabled
                 + LCR_H::PEN::ParityDisable
                 + match self.line {
-                    UARTLines::Console => LCR_H::STP2::TwoStopBits,
-                    UARTLines::Marklin => LCR_H::STP2::CLEAR,
+                    UARTLine::Console => LCR_H::STP2::TwoStopBits,
+                    UARTLine::Marklin => LCR_H::STP2::CLEAR,
                 },
         );
 
@@ -278,18 +287,21 @@ impl UART {
         self.registers.FR.is_set(FR::TXFF)
     }
 
-    pub fn putc_nowait(&mut self, ch: char) {
+    pub fn putc_nowait(&mut self, ch: u8) {
         self.registers.DR.set(ch as u32)
     }
 
-    pub fn putc(&mut self, ch: char) {
-        while self.txwaiting() {
-            asm::nop()
-        }
+    pub fn putc(&mut self, ch: u8) {
+        while self.txwaiting() {}
         self.putc_nowait(ch)
     }
 
-    pub fn println(&mut self, str: &str) {
-        str.chars().for_each(|ch| self.putc(ch))
+    pub fn put_slice(&mut self, slice: &[u8]) {
+        slice.iter().for_each(|ch| self.putc(*ch));
+    }
+
+    pub fn println(&mut self, str: &[u8]) {
+        str.iter().for_each(|ch| self.putc(*ch));
+        self.putc(b'\n');
     }
 }

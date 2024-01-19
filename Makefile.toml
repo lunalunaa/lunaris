@@ -12,14 +12,15 @@ dependencies = ["build-lab"]
 command = "cargo"
 args = ["build", "--${@}"]
 
+[tasks.cleanup]
+command = "rm"
+args = ["-rf", "kernel.img"]
+
 [tasks.build-lab]
 command = "cargo"
 args = ["build", "--${@}", "--features", "lab", "--no-default-features"]
 
-
-[tasks.clean]
-run_task = "rm *.img"
-
 [tasks.qemu]
 command = "qemu-system-aarch64"
 args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img"]
+dependencies = ["image"]
