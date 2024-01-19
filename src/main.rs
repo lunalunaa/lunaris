@@ -6,7 +6,7 @@ mod term;
 use aarch64_cpu::asm;
 use core::arch::global_asm;
 use panic_halt as _;
-use setup::{UARTLine, UART};
+use term::Term;
 
 #[cfg(feature = "default")]
 global_asm!(include_str!("boot.S"));
@@ -22,10 +22,8 @@ pub fn wait_forever() -> ! {
 
 #[no_mangle]
 extern "C" fn _kmain() -> ! {
-    let mut uart_console = UART::new(UARTLine::Console);
-    uart_console.init();
-
-    uart_console.println(b"\x1b[2J");
-    uart_console.println(b"Hello");
+    let mut term = Term::init();
+    term.put_slice(b"hellowwwwww");
+    term.flush_all();
     wait_forever()
 }

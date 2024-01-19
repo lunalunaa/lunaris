@@ -214,7 +214,7 @@ pub struct UART {
 }
 
 impl UART {
-    pub fn new(line: UARTLine) -> Self {
+    fn new(line: UARTLine) -> Self {
         Self {
             registers: Registers::new(line.addr()),
             line,
@@ -233,7 +233,7 @@ impl UART {
         return uart;
     }
 
-    pub fn init(&mut self) {
+    fn init(&mut self) {
         let (baud_ival, baud_fval): (u32, u32);
 
         match self.line {

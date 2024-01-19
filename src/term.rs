@@ -1,9 +1,11 @@
-use ringbuf::{ring_buffer::RbBase, Rb};
+use ringbuf::{ring_buffer::RbBase, Rb, StaticRb};
 
 use crate::setup::UART;
 
 const BUFFER_SIZE: usize = 2048;
 const BUFFER_FLUSH_SIZE: usize = 256;
+const WINDOW_WIDTH: usize = 140;
+const WINDOW_HEIGHT: usize = 90;
 
 struct Cursor {
     pub x: usize,
@@ -11,7 +13,13 @@ struct Cursor {
     pub on: bool,
 }
 
-struct Term {
+impl Cursor {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self { x, y, on: false }
+    }
+}
+
+pub struct Term {
     uart: UART,
     buffer: ringbuf::StaticRb<u8, BUFFER_SIZE>,
     width: usize,
@@ -33,6 +41,8 @@ fn u_to_str(i: usize, buf: &mut [u8; 10]) -> usize {
             n /= 10;
         }
     }
+
+    buf.reverse();
     return cnt;
 }
 
@@ -49,6 +59,20 @@ fn create_slice() -> [u8; 10] {
 }
 
 impl Term {
+    pub fn init() -> Self {
+        Self {
+            uart: UART::console(),
+            buffer: StaticRb::default(),
+            width: WINDOW_WIDTH,
+            height: WINDOW_HEIGHT,
+            cursor: Cursor::new(0, 0),
+        }
+    }
+
+    pub fn flush_all(&mut self) {
+        self.buffer.pop_iter().for_each(|c| self.uart.putc(c));
+    }
+
     fn flush(&mut self, len: usize) {
         self.buffer
             .pop_iter()
@@ -99,7 +123,7 @@ impl Term {
         }
     }
 
-    fn put_slice(&mut self, str: &[u8]) {
+    pub fn put_slice(&mut self, str: &[u8]) {
         if self.buffer.free_len() == str.len() {
             self.buffer.push_slice(str);
             self.flush(BUFFER_FLUSH_SIZE);
