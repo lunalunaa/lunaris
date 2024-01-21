@@ -134,4 +134,11 @@ impl Term {
             self.buffer.push_slice(str)
         }
     }
+
+    pub fn put_u(&mut self, u: usize) {
+        let mut buf = create_slice();
+        let len = u_to_str(u, &mut buf);
+
+        buf.iter().take(len).for_each(|c| self.put_ch(*c))
+    }
 }
