@@ -57,7 +57,16 @@ struct TaskQueue {
     cnt: usize,
 }
 
+pub static mut TASK_QUEUE_GLOBAL: TaskQueue = TaskQueue::new();
+
 impl TaskQueue {
+    pub const fn new() -> Self {
+        TaskQueue {
+            heap: BinaryHeap::new(),
+            cnt: 0,
+        }
+    }
+
     pub fn create(&mut self, priority: usize, parent: Option<&'static Task>, fn_ptr: fn()) -> i8 {
         self.cnt -= 1;
         let id = self.heap.len();

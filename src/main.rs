@@ -21,7 +21,7 @@ global_asm!(include_str!("boot.S"));
 #[cfg(feature = "lab")]
 global_asm!(include_str!("boot_lab.S"));
 
-//const EXCEPTION_VECTOR_TABLE_ADDR: u64 = 0x40000000;
+const EXCEPTION_VECTOR_TABLE_ADDR: u64 = 0x40000000;
 
 #[inline(always)]
 pub fn wait_forever() -> ! {
@@ -51,8 +51,11 @@ fn el1_setup(boot_core_stack_end_exclusive: u64) {
     cpu::asm::eret();
 }
 
-#[no_mangle]
-extern "C" fn main() -> ! {
+fn exception_setup() {
+    cpu::registers::VBAR_EL1.set(EXCEPTION_VECTOR_TABLE_ADDR);
+}
+
+fn main() -> ! {
     let mut term = Term::init();
     //term.put_u(unsafe { addr_of!(syscall::TRAP_FRAME) as usize });
     // term.put_u_hex(aarch64_cpu::registers::SP.get() as usize);
