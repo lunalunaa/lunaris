@@ -41,10 +41,10 @@ _start:
     cbz  x9, el1_entry
 
     // otherwise, switch to EL1 by fake exception to return from
-    ldr x10, =18446744071562067968
+    mov x10, =2147483648
     msr hcr_el2, x10
 
-    ldr x11, =709
+    mov x11, =709
     msr spsr_el2, x11
 
     adr x12, el1_entry
@@ -54,7 +54,7 @@ _start:
 
 el1_entry:
     // configure processor and mmu
-    ldr x13, =819268096
+    mov x13, =819268096
     msr sctlr_el1, x13
 
 	// Initialize DRAM.

@@ -31,9 +31,14 @@ _start:
 	mrs   x1, mpidr_el1
     and   x1, x1, #3
     cmp   x1, #0
-    bne   exit
+    bne   .L_parking_loop
 
 	// If execution reaches here, it is the boot core.
+
+	// are we in EL2?
+    mrs  x9, CurrentEL
+    cmp  x9, #8
+    b.ne .L_parking_loop
 
 	// Initialize DRAM.
 	ADR_REL	x0, __bss_start
@@ -58,11 +63,6 @@ _start:
 .L_parking_loop:
 	wfe
 	b	.L_parking_loop
-
-exit:
-    // shouldn't be reached
-    wfi
-    b  exit
 
 .size	_start, . - _start
 .type	_start, function

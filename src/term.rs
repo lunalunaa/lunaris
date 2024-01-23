@@ -1,3 +1,5 @@
+use heapless::String;
+use numtoa::NumToA;
 use ringbuf::{ring_buffer::RbBase, Rb, StaticRb};
 
 use crate::setup::UART;
@@ -25,37 +27,6 @@ pub struct Term {
     width: usize,
     height: usize,
     cursor: Cursor,
-}
-
-fn u_to_str(i: usize, buf: &mut [u8; 10]) -> usize {
-    let mut n = i;
-    let mut cnt = 0;
-
-    if n == 0 {
-        buf[cnt] = b'0';
-        cnt += 1;
-    } else {
-        while n > 0 {
-            buf[cnt] = (n % 10) as u8 + b'0';
-            cnt += 1;
-            n /= 10;
-        }
-    }
-
-    buf.reverse();
-    return cnt;
-}
-
-#[inline(always)]
-fn to_str(i: i32, buf: &mut [u8; 10]) {
-    if i < 0 {
-        u_to_str(-i as usize, buf);
-    }
-}
-
-#[inline(always)]
-fn create_slice() -> [u8; 10] {
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 }
 
 impl Term {
@@ -87,10 +58,7 @@ impl Term {
 
     fn move_cursor(&mut self, x: usize, y: usize) {
         self.put_escape();
-        let mut buf = create_slice();
-        let len = u_to_str(x, &mut buf);
-
-        buf.iter().take(len).for_each(|u| self.put_ch(*u));
+        let buf: String<10> = (x as u64).try_into().unwrap();
     }
 
     fn cursor_pos(&mut self) -> Cursor {
@@ -135,10 +103,9 @@ impl Term {
         }
     }
 
-    pub fn put_u(&mut self, u: usize) {
-        let mut buf = create_slice();
-        let len = u_to_str(u, &mut buf);
+    pub fn put_u_hex(&mut self, u: usize) {
+        let mut buffer = [0u8; 20];
 
-        buf.iter().take(len).for_each(|c| self.put_ch(*c))
+        self.put_slice(u.numtoa(16, &mut buffer));
     }
 }

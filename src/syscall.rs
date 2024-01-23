@@ -1,8 +1,4 @@
-use arr_macro::arr;
 use core::arch::asm;
-
-#[no_mangle]
-pub static mut TRAP_FRAME: [u64; 40] = arr![0;40];
 
 const EXCEPTION_CODE_CREATE: u16 = 1;
 const EXCEPTION_CODE_MY_TID: u16 = 2;
@@ -45,7 +41,7 @@ pub extern "C" fn Yield() -> ! {
     loop {}
 }
 
-pub fn Exit() -> ! {
+pub extern "C" fn Exit() -> ! {
     unsafe {
         asm!("svc {N}", N = const EXCEPTION_CODE_EXIT);
     }

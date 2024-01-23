@@ -8,13 +8,13 @@ use tock_registers::{
 };
 
 #[cfg(feature = "lab")]
-static MMIO_BASE: usize = 0xFE00_0000;
+const MMIO_BASE: usize = 0xFE00_0000;
 #[cfg(feature = "default")]
-static MMIO_BASE: usize = 0x3F00_0000;
+const MMIO_BASE: usize = 0x3F00_0000;
 
-static UART0_BASE: usize = MMIO_BASE + 0x201000;
-static UART3_BASE: usize = MMIO_BASE + 0x201600;
-static CLK_BASE: usize = MMIO_BASE + 0x3000;
+const UART0_BASE: usize = MMIO_BASE + 0x201000;
+const UART3_BASE: usize = MMIO_BASE + 0x201600;
+const CLK_BASE: usize = MMIO_BASE + 0x3000;
 
 // PL011 UART registers.
 //

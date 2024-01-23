@@ -1,33 +1,73 @@
-[tasks.image]
-dependencies = ["build"]
-run_task = "copy-obj"
+[env]
+RUSTFLAGS_LAB = "-C target-cpu=cortex-a53 -C target-feature=-neon -C link-arg=--script=linker.ld"
+RUSTFLAGS_QEMU = "-C target-cpu=cortex-a72 -C target-feature=-neon -C link-arg=--script=linker.ld"
 
-[tasks.copy-obj]
+[tasks.image-debug]
+dependencies = ["build-debug"]
+run_task = "copy-obj-debug"
+
+[tasks.image-release]
+dependencies = ["build-release"]
+run_task = "copy-obj-release"
+
+[tasks.copy-obj-debug]
 command = "rust-objcopy"
-args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/${@}/lunaris", "kernel.img"]
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/debug/lunaris", "kernel.img"]
 
-[tasks.image-lab]
-dependencies = ["build-lab"]
-run_task = "copy-obj"
+[tasks.copy-obj-release]
+command = "rust-objcopy"
+args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/release/lunaris", "kernel.img"]
 
-[tasks.build]
+[tasks.image-lab-debug]
+dependencies = ["build-lab-debug"]
+run_task = "copy-obj-debug"
+
+[tasks.image-lab-release]
+dependencies = ["build-lab-release"]
+run_task = "copy-obj-release"
+
+[tasks.build-debug]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_QEMU}" }
 command = "cargo"
-args = ["build", "--${@}"]
+args = ["build", "-Z", "build-std=core"]
+
+[tasks.build-release]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_QEMU}" }
+command = "cargo"
+args = ["build", "--release", "-Z", "build-std=core"]
 
 [tasks.cleanup]
 command = "rm"
 args = ["-rf", "kernel.img"]
 
-[tasks.build-lab]
+[tasks.build-lab-debug]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_LAB}" }
 command = "cargo"
-args = ["build", "--${@}", "--features", "lab", "--no-default-features"]
+args = ["build", "--features", "lab", "--no-default-features", "-Z", "build-std=core"]
+
+[tasks.build-lab-release]
+env = { "RUSTFLAGS" = "${RUSTFLAGS_LAB}" }
+command = "cargo"
+args = ["build", "--release", "--features", "lab", "--no-default-features", "-Z", "build-std=core"]
 
 [tasks.qemu]
 command = "qemu-system-aarch64"
 args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img"]
-dependencies = ["image"]
+dependencies = ["image-debug"]
 
-[tasks.dump]
+[tasks.qemu-debug]
+alias = "qemu"
+
+[tasks.qemu-release]
+extend = "qemu"
+dependencies = ["image-release"]
+
+[tasks.dump-debug]
 command = "rust-objdump"
-args = ["-d", "target/aarch64-unknown-none/${@}/lunaris"]
-dependencies = ["image"]
+args = ["-d", "target/aarch64-unknown-none/debug/lunaris"]
+dependencies = ["image-debug"]
+
+[tasks.dump-release]
+command = "rust-objdump"
+args = ["-d", "target/aarch64-unknown-none/release/lunaris"]
+dependencies = ["image-release"]
