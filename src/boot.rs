@@ -1,4 +1,3 @@
-use crate::syscall::MyTid;
 use crate::tasks::Task;
 use crate::term::TERM_GLOBAL;
 use aarch64_cpu as cpu;
@@ -23,7 +22,7 @@ pub fn wait_forever() -> ! {
 
 // no use for this function for now
 #[inline(always)]
-fn el1_setup(boot_core_stack_end_exclusive: u64) {
+pub fn el1_setup(boot_core_stack_end_exclusive: u64) {
     cpu::registers::HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
     cpu::registers::SCTLR_EL1.write(
         SCTLR_EL1::NTWE::DontTrap
@@ -44,6 +43,7 @@ fn el1_setup(boot_core_stack_end_exclusive: u64) {
     cpu::asm::eret();
 }
 
+#[inline(always)]
 unsafe fn exception_setup() {
     extern "Rust" {
         static vector_table_start: UnsafeCell<()>;
@@ -54,7 +54,7 @@ unsafe fn exception_setup() {
 }
 
 #[inline(always)]
-fn el0_setup() {
+pub fn el0_setup(func: u64) {
     cpu::registers::SPSR_EL1.write(
         SPSR_EL1::A::Masked
             + SPSR_EL1::F::Masked
@@ -62,7 +62,7 @@ fn el0_setup() {
             + SPSR_EL1::I::Masked
             + SPSR_EL1::D::Masked,
     );
-    cpu::registers::ELR_EL1.set(main as u64);
+    cpu::registers::ELR_EL1.set(func as u64);
     unsafe {
         exception_setup();
     }
@@ -79,13 +79,15 @@ fn handle() {}
 
 fn main() -> ! {
     unsafe {
-        TERM_GLOBAL.put_slice(b"current EL: ");
+        TERM_GLOBAL.put_slice(b"EL0 transition success\n");
         // somehow it is illegal to get this from EL0
         //TERM_GLOBAL.put_u_hex(cpu::registers::CurrentEL.get() as usize);
         //TERM_GLOBAL.put_slice(b"\n");
         TERM_GLOBAL.flush_all();
     }
-    MyTid();
+    unsafe {
+        TERM_GLOBAL.put_slice(b"EL0 transition success\n");
+    }
 
     loop {}
 }
@@ -93,6 +95,6 @@ fn main() -> ! {
 #[no_mangle]
 extern "C" fn _kmain(boot_core_stack_end_exclusive: u64) -> ! {
     cpu::registers::SP_EL0.set(boot_core_stack_end_exclusive);
-    el0_setup();
+    el0_setup(main as u64);
     loop {}
 }

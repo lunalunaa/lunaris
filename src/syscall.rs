@@ -1,10 +1,10 @@
 use core::arch::asm;
 
-const EXCEPTION_CODE_CREATE: u16 = 1;
-const EXCEPTION_CODE_MY_TID: u16 = 2;
-const EXCEPTION_CODE_MY_PARENT_TID: u16 = 3;
-const EXCEPTION_CODE_YIELD: u16 = 4;
-const EXCEPTION_CODE_EXIT: u16 = 5;
+pub const EXCEPTION_CODE_CREATE: u64 = 1;
+pub const EXCEPTION_CODE_MY_TID: u64 = 2;
+pub const EXCEPTION_CODE_MY_PARENT_TID: u64 = 3;
+pub const EXCEPTION_CODE_YIELD: u64 = 4;
+pub const EXCEPTION_CODE_EXIT: u64 = 5;
 
 pub extern "C" fn Create(priority: usize, func: fn()) -> i8 {
     let mut ret: u64 = 0;

@@ -108,6 +108,17 @@ impl Term {
 
         self.put_slice(u.numtoa(16, &mut buffer));
     }
+
+    pub fn put_u_dec(&mut self, u: usize) {
+        let mut buffer = [0u8; 20];
+
+        self.put_slice(u.numtoa(10, &mut buffer));
+    }
+
+    pub fn put_slice_flush(&mut self, str: &[u8]) {
+        self.put_slice(str);
+        self.flush_all();
+    }
 }
 
 pub static mut TERM_GLOBAL: Lazy<Term> = Lazy::new(|| Term::init());

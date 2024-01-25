@@ -7,48 +7,48 @@ vector_table_start:
 
 .org 0x000
 curr_el_sp0_sync:
-    b syscall_handler
+    b __syscall_handler
 
 .org 0x080
-	b syscall_handler
+	b __syscall_handler
 .org 0x100
-	b syscall_handler
+	b __syscall_handler
 .org 0x180
-	b syscall_handler
+	b __syscall_handler
 
 // Current exception level with SP_ELx, x > 0.
 .org 0x200
-	b syscall_handler
+	b __syscall_handler
 .org 0x280
-	b syscall_handler
+	b __syscall_handler
 .org 0x300
-	b syscall_handler
+	b __syscall_handler
 .org 0x380
-	b syscall_handler
+	b __syscall_handler
 
 // Lower exception level, AArch64
 .org 0x400 // this is the one
-	b syscall_handler
+	b __syscall_handler
 .org 0x480
-	b syscall_handler
+	b __syscall_handler
 .org 0x500
-	b syscall_handler
+	b __syscall_handler
 .org 0x580
-	b syscall_handler
+	b __syscall_handler
 
 // Lower exception level, AArch32
 .org 0x600
-	b syscall_handler
+	b __syscall_handler
 .org 0x680
-	b syscall_handler
+	b __syscall_handler
 .org 0x700
-	b syscall_handler
+	b __syscall_handler
 .org 0x780
-	b syscall_handler
+	b __syscall_handler
 .org 0x800
 
 
-syscall_handler:
+__syscall_handler:
     // we are using user stack rn
     sub sp, sp, #192
     stp x0, x1, [sp, #0]
@@ -64,8 +64,11 @@ syscall_handler:
     stp x30, xzr, [sp, #160]
 
     mrs x0, ESR_EL1
+    add x0, x0, #4 // go to the next instruction
     mrs x1, SPSR_EL1
     stp x0, x1, [sp, #176]
+    mrs x0, ELR_EL1
+    str x0, [sp, #192]
 
     mov x0, sp
     msr SPSel, #1 // let the kernel use SP_EL1
@@ -73,7 +76,12 @@ syscall_handler:
 
 
 /*
-syscall_ret:
+__syscall_ret:
+    ldr x0, [sp, #192]
+    msr ESR_EL1, x0
+    ldp x0, x1, [sp, #176]
+    msr ESR_EL1, x0
+    msr SPSR_EL1, x1
     ldp x0, x1, [sp, #0]
     ldp x2, x3, [sp, #16]
     ldp x4, x5, [sp, #32]
@@ -85,7 +93,7 @@ syscall_ret:
     ldp x16, x17, [sp, #128]
     ldp x18, x29, [sp, #144]
     ldp x30, xzr, [sp, #160]
-    add sp, sp, #192
+    add sp, sp, #200
     eret
 
 // only need to save callee saved registers?? because before we jump here (from rust code), the other registers will be saved automatically
