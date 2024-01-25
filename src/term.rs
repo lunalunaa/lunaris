@@ -1,8 +1,8 @@
+use crate::setup::UART;
 use heapless::String;
 use numtoa::NumToA;
+use once_cell::unsync::Lazy;
 use ringbuf::{ring_buffer::RbBase, Rb, StaticRb};
-
-use crate::setup::UART;
 
 const BUFFER_SIZE: usize = 2048;
 const BUFFER_FLUSH_SIZE: usize = 256;
@@ -109,3 +109,5 @@ impl Term {
         self.put_slice(u.numtoa(16, &mut buffer));
     }
 }
+
+pub static mut TERM_GLOBAL: Lazy<Term> = Lazy::new(|| Term::init());

@@ -1,6 +1,8 @@
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
 
+use crate::sys_syscall::ExceptionFrame;
+
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
 
@@ -18,17 +20,13 @@ enum TaskRunState {
 enum Request {}
 
 #[derive(Eq, Constructor, Debug)]
-struct Task {
+pub struct Task {
     id: u8,
     priority: usize,
     cnt: usize,
     parent: Option<&'static Task>,
-    next_ready: Option<&'static Task>,
-    next_send: Option<&'static Task>,
     run_state: TaskRunState,
-    stack_ptr: Option<*const usize>,
-    spsr: Option<*const u32>,
-
+    trap_frame: Option<ExceptionFrame>,
     fn_ptr: fn(),
 }
 
@@ -52,38 +50,37 @@ impl PartialEq for Task {
     }
 }
 
-struct TaskQueue {
-    heap: BinaryHeap<Task, Max, TASK_SIZE>,
+pub struct Scheduler {
+    active_task: Option<Task>,
+    ready_queue: BinaryHeap<Task, Max, TASK_SIZE>,
     cnt: usize,
 }
 
-pub static mut TASK_QUEUE_GLOBAL: TaskQueue = TaskQueue::new();
+pub static mut TASK_QUEUE_GLOBAL: Scheduler = Scheduler::new();
 
-impl TaskQueue {
+impl Scheduler {
     pub const fn new() -> Self {
-        TaskQueue {
-            heap: BinaryHeap::new(),
+        Scheduler {
+            active_task: None,
+            ready_queue: BinaryHeap::new(),
             cnt: 0,
         }
     }
 
     pub fn create(&mut self, priority: usize, parent: Option<&'static Task>, fn_ptr: fn()) -> i8 {
         self.cnt -= 1;
-        let id = self.heap.len();
+        let id = self.ready_queue.len();
         let task = Task {
             id: id as u8,
             priority,
             cnt: self.cnt,
             parent,
-            next_ready: None,
-            next_send: None,
             run_state: TaskRunState::Ready,
-            stack_ptr: None,
-            spsr: None,
+            trap_frame: None,
             fn_ptr,
         };
 
-        if self.heap.push(task).is_ok() {
+        if self.ready_queue.push(task).is_ok() {
             return id as i8;
         } else {
             return OUT_OF_DESCRIPTORS;
@@ -92,11 +89,11 @@ impl TaskQueue {
 
     pub fn push(&mut self, mut task: Task) -> Result<(), Task> {
         task.cnt -= 1;
-        self.heap.push(task)
+        self.ready_queue.push(task)
     }
 
     pub fn schedule(&mut self) -> Option<Task> {
-        return self.heap.pop();
+        return self.ready_queue.pop();
     }
 
     pub fn activate(&mut self, task: &Task) -> Request {

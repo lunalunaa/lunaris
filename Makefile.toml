@@ -1,6 +1,6 @@
 [env]
-RUSTFLAGS_LAB = "-C target-cpu=cortex-a53 -C target-feature=-neon -C link-arg=--script=linker.ld"
-RUSTFLAGS_QEMU = "-C target-cpu=cortex-a72 -C target-feature=-neon -C link-arg=--script=linker.ld"
+RUSTFLAGS_LAB = "-C target-cpu=cortex-a72 -C target-feature=-neon -C link-arg=--script=linker.ld"
+RUSTFLAGS_QEMU = "-C target-cpu=cortex-a53 -C target-feature=-neon -C link-arg=--script=linker.ld"
 
 [tasks.image-debug]
 dependencies = ["build-debug"]
@@ -52,8 +52,18 @@ args = ["build", "--release", "--features", "lab", "--no-default-features", "-Z"
 
 [tasks.qemu]
 command = "qemu-system-aarch64"
-args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img"]
+args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img", "-d", "int"]
 dependencies = ["image-debug"]
+
+[tasks.qemu-efi-debug]
+command = "qemu-system-aarch64"
+args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/debug/lunaris", "-d", "int"]
+dependencies = ["build-debug"]
+
+[tasks.qemu-efi-release]
+command = "qemu-system-aarch64"
+args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/release/lunaris", "-d", "int"]
+dependencies = ["build-release"]
 
 [tasks.qemu-debug]
 alias = "qemu"
