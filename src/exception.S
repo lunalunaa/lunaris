@@ -64,18 +64,16 @@ __syscall_handler:
     stp x30, xzr, [sp, #160]
 
     mrs x0, ESR_EL1
-    add x0, x0, #4 // go to the next instruction
     mrs x1, SPSR_EL1
     stp x0, x1, [sp, #176]
     mrs x0, ELR_EL1
+    add x0, x0, #4
     str x0, [sp, #192]
 
     mov x0, sp
     msr SPSel, #1 // let the kernel use SP_EL1
     bl syscall
 
-
-/*
 __syscall_ret:
     ldr x0, [sp, #192]
     msr ESR_EL1, x0
@@ -93,9 +91,10 @@ __syscall_ret:
     ldp x16, x17, [sp, #128]
     ldp x18, x29, [sp, #144]
     ldp x30, xzr, [sp, #160]
-    add sp, sp, #200
+    add sp, sp, #192
     eret
 
+/*
 // only need to save callee saved registers?? because before we jump here (from rust code), the other registers will be saved automatically
 sys_to_usr:
     sub sp, sp, #192

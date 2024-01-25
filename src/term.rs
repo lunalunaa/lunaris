@@ -115,6 +115,11 @@ impl Term {
         self.put_slice(u.numtoa(10, &mut buffer));
     }
 
+    pub fn put_u_dec_flush(&mut self, u: usize) {
+        self.put_u_dec(u);
+        self.flush_all();
+    }
+
     pub fn put_slice_flush(&mut self, str: &[u8]) {
         self.put_slice(str);
         self.flush_all();

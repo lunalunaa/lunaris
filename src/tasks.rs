@@ -1,10 +1,12 @@
-use core::arch::asm;
+use core::arch::global_asm;
 
 use aarch64_cpu as cpu;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
 
 use crate::{boot::el0_setup, sys_syscall::ExceptionFrame};
+
+global_asm!(include_str!("switch.S"));
 
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
@@ -23,6 +25,7 @@ pub enum TaskRunState {
 pub enum Request {}
 
 #[repr(C)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Context {
     x19: u64,
     x20: u64,
@@ -67,7 +70,7 @@ pub struct Task {
     pub parent: Option<&'static Task>,
     pub run_state: TaskRunState,
     pub trap_frame: Option<*mut ExceptionFrame>,
-    pub context: Option<*mut Context>,
+    pub context: Option<Context>,
     pub fn_ptr: fn(),
 }
 
@@ -91,14 +94,28 @@ impl PartialEq for Task {
     }
 }
 
+pub struct CPU {
+    pub scheduler: Scheduler,
+    pub context: Context,
+}
+
+impl CPU {
+    const fn init() -> Self {
+        Self {
+            scheduler: Scheduler::new(),
+            context: Context::new(),
+        }
+    }
+}
+
+pub static mut CPU_GLOBAL: CPU = CPU::init();
+
 pub struct Scheduler {
     active_task: Option<Task>,
     ready_queue: BinaryHeap<Task, Max, TASK_SIZE>,
     cnt: usize,
     context: Context,
 }
-
-pub static mut SCHEDULER_GLOBAL: Scheduler = Scheduler::new();
 
 impl Scheduler {
     pub const fn new() -> Self {
@@ -140,7 +157,10 @@ impl Scheduler {
         self.ready_queue.push(task)
     }
 
-    pub fn schedule(&mut self) -> Option<Task> {}
+    /// Check the priority of the current running task and the task to be scheduled.
+    pub fn schedule(&mut self) -> Option<Task> {
+        todo!()
+    }
 
     pub fn activate(&mut self, mut task: Task) {
         extern "C" {
@@ -160,7 +180,14 @@ impl Scheduler {
         } else {
             unsafe {
                 el0_setup(task.fn_ptr as u64);
-                __switch_to_task(self.context as *mut Context);
+                if task.context.is_none() {
+                    let context = Context::new();
+                    task.context = Some(context);
+                    __switch_to_task(
+                        &mut CPU_GLOBAL.context as *mut Context,
+                        &mut task.context.unwrap() as *mut Context,
+                    );
+                }
             }
         }
     }

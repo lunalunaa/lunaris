@@ -1,10 +1,9 @@
-use crate::tasks::Task;
-use crate::term::TERM_GLOBAL;
+use crate::{main, syscall::MyTid, term::TERM_GLOBAL};
 use aarch64_cpu as cpu;
 use core::{arch::global_asm, cell::UnsafeCell};
 use cpu::{
     asm,
-    registers::{Writeable, HCR_EL2, SCTLR_EL1, SPSR_EL1, SPSR_EL2},
+    registers::{Writeable, HCR_EL2, SCR_EL3, SCTLR_EL1, SPSR_EL1, SPSR_EL2, SPSR_EL3},
 };
 use panic_halt as _;
 
@@ -62,39 +61,17 @@ pub fn el0_setup(func: u64) {
             + SPSR_EL1::I::Masked
             + SPSR_EL1::D::Masked,
     );
-    cpu::registers::ELR_EL1.set(func as u64);
+    cpu::registers::ELR_EL1.set(func);
     unsafe {
         exception_setup();
     }
     cpu::asm::eret();
 }
 
-fn schedule() -> Task {
-    todo!()
-}
-
-fn activate() {}
-
-fn handle() {}
-
-fn main() -> ! {
-    unsafe {
-        TERM_GLOBAL.put_slice(b"EL0 transition success\n");
-        // somehow it is illegal to get this from EL0
-        //TERM_GLOBAL.put_u_hex(cpu::registers::CurrentEL.get() as usize);
-        //TERM_GLOBAL.put_slice(b"\n");
-        TERM_GLOBAL.flush_all();
-    }
-    unsafe {
-        TERM_GLOBAL.put_slice(b"EL0 transition success\n");
-    }
-
-    loop {}
-}
-
 #[no_mangle]
 extern "C" fn _kmain(boot_core_stack_end_exclusive: u64) -> ! {
-    cpu::registers::SP_EL0.set(boot_core_stack_end_exclusive);
+    unsafe { TERM_GLOBAL.put_slice(b"EL0 transition success\n") };
+    cpu::registers::SP_EL0.set(boot_core_stack_end_exclusive - 5000);
     el0_setup(main as u64);
     loop {}
 }

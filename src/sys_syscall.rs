@@ -1,13 +1,12 @@
 use crate::{
+    boot::el0_setup,
     syscall::EXCEPTION_CODE_MY_TID,
-    tasks::{Task, SCHEDULER_GLOBAL},
+    tasks::{Context, Task, CPU_GLOBAL},
     term::TERM_GLOBAL,
 };
 use aarch64_cpu as cpu;
 use core::arch::global_asm;
-use cpu::registers::{Readable, ESR_EL1, SPSR_EL1};
-
-use core::ptr;
+use cpu::registers::{Readable, ESR_EL1};
 
 global_asm!(include_str!("exception.S"));
 
@@ -68,8 +67,13 @@ unsafe fn kexit(task: &Task) -> i8 {
 
 /// Look up which syscall to excute and excute it
 #[no_mangle]
-pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
-    if let Some(task) = SCHEDULER_GLOBAL.curr_active() {
+pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) {
+    extern "C" {
+        fn __syscall_ret();
+        fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
+    }
+
+    if let Some(task) = CPU_GLOBAL.scheduler.curr_active() {
         let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
 
         let ret = match exception_num {
@@ -78,8 +82,9 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
         };
         let frame = unsafe { &mut *exception_frame };
         frame.x0 = ret as u64;
+        el0_setup(frame.elr);
+        __syscall_ret();
     } else {
+        todo!()
     }
-
-    loop {}
 }
