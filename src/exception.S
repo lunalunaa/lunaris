@@ -50,7 +50,9 @@ curr_el_sp0_sync:
 
 __syscall_handler:
     // we are using user stack rn
-    sub sp, sp, #192
+
+    msr SPSel, #0 // let the kernel use SP_EL0
+    sub sp, sp, #208
     stp x0, x1, [sp, #0]
     stp x2, x3, [sp, #16]
     stp x4, x5, [sp, #32]
@@ -67,16 +69,16 @@ __syscall_handler:
     mrs x1, SPSR_EL1
     stp x0, x1, [sp, #176]
     mrs x0, ELR_EL1
-    add x0, x0, #4
-    str x0, [sp, #192]
-
+    stp x0, x0, [sp, #192]
+    bl get_kernel_sp
+    mov x1, x0
     mov x0, sp
-    msr SPSel, #1 // let the kernel use SP_EL1
+    msr SPSel, #1
+    mov sp, x1
     bl syscall
 
 __syscall_ret:
-    ldr x0, [sp, #192]
-    msr ESR_EL1, x0
+    msr SPSel, #0
     ldp x0, x1, [sp, #176]
     msr ESR_EL1, x0
     msr SPSR_EL1, x1
@@ -91,7 +93,7 @@ __syscall_ret:
     ldp x16, x17, [sp, #128]
     ldp x18, x29, [sp, #144]
     ldp x30, xzr, [sp, #160]
-    add sp, sp, #192
+    add sp, sp, #208
     eret
 
 /*
@@ -119,4 +121,5 @@ sys_to_usr:
     bl syscall
 */
 .global vector_table_start
+.global __syscall_ret
 .size	vector_table_start, . - vector_table_start

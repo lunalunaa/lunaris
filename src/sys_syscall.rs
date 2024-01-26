@@ -6,7 +6,7 @@ use crate::{
 };
 use aarch64_cpu as cpu;
 use core::arch::global_asm;
-use cpu::registers::{Readable, ESR_EL1};
+use cpu::registers::{Readable, Writeable, ESR_EL1};
 
 global_asm!(include_str!("exception.S"));
 
@@ -38,6 +38,7 @@ pub struct ExceptionFrame {
     pub esr: u64,
     pub spsr: u64,
     pub elr: u64,
+    pub elr_dup: u64,
 }
 
 fn kcreate(task: &Task) -> i8 {
@@ -65,26 +66,36 @@ unsafe fn kexit(task: &Task) -> i8 {
     todo!()
 }
 
+#[no_mangle]
+pub extern "C" fn get_kernel_sp() -> u64 {
+    unsafe { CPU_GLOBAL.scheduler.curr_active().unwrap().kernel_sp }
+}
+
 /// Look up which syscall to excute and excute it
 #[no_mangle]
 pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) {
     extern "C" {
         fn __syscall_ret();
-        fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
+        fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context);
     }
 
-    if let Some(task) = CPU_GLOBAL.scheduler.curr_active() {
-        let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
+    TERM_GLOBAL.put_slice_flush(b"syscall received\n");
 
-        let ret = match exception_num {
-            EXCEPTION_CODE_MY_TID => kmy_tid(task),
-            _ => todo!(),
-        };
-        let frame = unsafe { &mut *exception_frame };
-        frame.x0 = ret as u64;
-        el0_setup(frame.elr);
-        __syscall_ret();
-    } else {
-        todo!()
-    }
+    let task = CPU_GLOBAL.scheduler.curr_active_mut().unwrap();
+    task.trap_frame = Some(exception_frame);
+    let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
+    let ret = match exception_num {
+        EXCEPTION_CODE_MY_TID => kmy_tid(task),
+        _ => todo!(),
+    };
+
+    let frame = unsafe { &mut *exception_frame };
+    frame.x0 = ret as u64;
+
+    __switch_to_scheduler(
+        task.context.as_mut().unwrap() as *mut Context,
+        &mut CPU_GLOBAL.context as *mut Context,
+    );
 }
+
+// todo: kernel stack needs to be restored

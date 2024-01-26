@@ -23,7 +23,7 @@ __switch_to_task:
     mov sp, x2
     eret
 
-__switch_to_kernel:
+__switch_to_scheduler:
     stp x19, x20, [x0, #0]
     stp x21, x22, [x0, #16]
     stp x23, x24, [x0, #32]
@@ -45,6 +45,6 @@ __switch_to_kernel:
     ret
 
 .global __switch_to_task
-.global __switch_to_kernel
-.type __switch_to_kernel, function
+.global __switch_to_scheduler
+.type __switch_to_scheduler, function
 .type __switch_to_task, function

@@ -79,11 +79,14 @@ msr spsr_el3, x0
 /*=============================================================*/
 adr x0, el1_secure
 msr elr_el3, x0
+ADR_REL	x0, __boot_core_stack_end_exclusive
+msr SP_EL1, x0 // set the stack pointer for EL1
 
 eret
 
 el1_secure:
     	// Initialize DRAM.
+    msr SPSel, #1
 	ADR_REL	x0, __bss_start
 	ADR_REL x1, __bss_end_exclusive
 

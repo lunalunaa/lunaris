@@ -1,11 +1,10 @@
-use crate::{main, syscall::MyTid, term::TERM_GLOBAL};
+use crate::{main, tasks::CPU_GLOBAL, term::TERM_GLOBAL};
 use aarch64_cpu as cpu;
 use core::{arch::global_asm, cell::UnsafeCell};
 use cpu::{
     asm,
-    registers::{Writeable, HCR_EL2, SCR_EL3, SCTLR_EL1, SPSR_EL1, SPSR_EL2, SPSR_EL3},
+    registers::{Readable, Writeable, HCR_EL2, SCTLR_EL1, SPSR_EL1, SPSR_EL2, SPSR_EL3},
 };
-use panic_halt as _;
 
 #[cfg(feature = "default")]
 global_asm!(include_str!("boot_alt.S"));
@@ -52,26 +51,34 @@ unsafe fn exception_setup() {
     asm::barrier::isb(asm::barrier::SY);
 }
 
+/// Sets up the ELR_EL1 and SP_EL0
 #[inline(always)]
-pub fn el0_setup(func: u64) {
+pub fn el0_setup(func: u64, sp: u64) {
     cpu::registers::SPSR_EL1.write(
         SPSR_EL1::A::Masked
             + SPSR_EL1::F::Masked
             + SPSR_EL1::M::EL0t
             + SPSR_EL1::I::Masked
-            + SPSR_EL1::D::Masked,
+            + SPSR_EL1::D::Unmasked,
     );
     cpu::registers::ELR_EL1.set(func);
+    cpu::registers::SP_EL0.set(sp);
     unsafe {
         exception_setup();
     }
-    cpu::asm::eret();
 }
 
 #[no_mangle]
-extern "C" fn _kmain(boot_core_stack_end_exclusive: u64) -> ! {
-    unsafe { TERM_GLOBAL.put_slice(b"EL0 transition success\n") };
-    cpu::registers::SP_EL0.set(boot_core_stack_end_exclusive - 5000);
-    el0_setup(main as u64);
+extern "C" fn _kmain() -> ! {
+    unsafe {
+        TERM_GLOBAL.put_slice_flush(b"EL1 transition success\n");
+        TERM_GLOBAL.put_slice_flush(b"current SPSel: ");
+        TERM_GLOBAL.put_u_dec(cpu::registers::SPSel.get() as usize);
+        TERM_GLOBAL.put_slice_flush(b"\n");
+    };
+    unsafe {
+        CPU_GLOBAL.scheduler.create(0, None, main);
+        CPU_GLOBAL.scheduler.run();
+    }
     loop {}
 }
