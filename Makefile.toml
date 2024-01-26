@@ -12,11 +12,23 @@ run_task = "copy-obj-release"
 
 [tasks.copy-obj-debug]
 command = "rust-objcopy"
-args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/debug/lunaris", "kernel.img"]
+args = [
+    "--strip-all",
+    "-O",
+    "binary",
+    "target/aarch64-unknown-none/debug/lunaris",
+    "kernel.img",
+]
 
 [tasks.copy-obj-release]
 command = "rust-objcopy"
-args = ["--strip-all", "-O", "binary", "target/aarch64-unknown-none/release/lunaris", "kernel.img"]
+args = [
+    "--strip-all",
+    "-O",
+    "binary",
+    "target/aarch64-unknown-none/release/lunaris",
+    "kernel.img",
+]
 
 [tasks.image-lab-debug]
 dependencies = ["build-lab-debug"]
@@ -39,16 +51,26 @@ args = ["build", "--release"]
 [tasks.build-lab-debug]
 env = { "RUSTFLAGS" = "${RUSTFLAGS_LAB}" }
 command = "cargo"
-args = ["build", "--features", "lab", "--no-default-features", "-Z", "build-std=core"]
+args = ["build", "--features", "lab", "--no-default-features"]
 
 [tasks.build-lab-release]
 env = { "RUSTFLAGS" = "${RUSTFLAGS_LAB}" }
 command = "cargo"
-args = ["build", "--release", "--features", "lab", "--no-default-features", "-Z", "build-std=core"]
+args = ["build", "--release", "--features", "lab", "--no-default-features"]
 
 [tasks.qemu]
 command = "qemu-system-aarch64"
-args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "kernel.img", "-d", "int"]
+args = [
+    "-M",
+    "raspi3b",
+    "-m",
+    "1024",
+    "-serial",
+    "mon:stdio",
+    "-nographic",
+    "-kernel",
+    "kernel.img",
+]
 dependencies = ["image-debug"]
 
 [tasks.qemu-debug]
@@ -60,22 +82,74 @@ dependencies = ["image-release"]
 
 [tasks.qemu-elf-debug]
 command = "qemu-system-aarch64"
-args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/debug/lunaris", "-d", "int"]
+args = [
+    "-M",
+    "raspi3b",
+    "-m",
+    "1024",
+    "-serial",
+    "mon:stdio",
+    "-nographic",
+    "-kernel",
+    "target/aarch64-unknown-none/debug/lunaris",
+    "-d",
+    "int",
+]
 dependencies = ["build-debug"]
 
 [tasks.qemu-elf-release]
 command = "qemu-system-aarch64"
-args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/release/lunaris", "-d", "int"]
+args = [
+    "-M",
+    "raspi3b",
+    "-m",
+    "1024",
+    "-serial",
+    "mon:stdio",
+    "-nographic",
+    "-kernel",
+    "target/aarch64-unknown-none/release/lunaris",
+    "-d",
+    "int",
+]
 dependencies = ["build-release"]
 
 [tasks.qemu-gdb-debug]
 command = "qemu-system-aarch64"
-args = ["-S", "-s", "-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/debug/lunaris", "-d", "int"]
+args = [
+    "-S",
+    "-s",
+    "-M",
+    "raspi3b",
+    "-m",
+    "1024",
+    "-serial",
+    "mon:stdio",
+    "-nographic",
+    "-kernel",
+    "target/aarch64-unknown-none/debug/lunaris",
+    "-d",
+    "int",
+]
 dependencies = ["build-debug"]
 
 [tasks.qemu-gdb-release]
 command = "qemu-system-aarch64"
-args = ["-S", "-s", "-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/release/lunaris", "-d", "int"]
+args = [
+    "-S",
+    "-s",
+    "-M",
+    "raspi3b",
+    "-m",
+    "1024",
+    "-serial",
+    "mon:stdio",
+    "-nographic",
+    "-kernel",
+    "target/aarch64-unknown-none/release/lunaris",
+    "-d",
+    "int",
+]
 dependencies = ["build-release"]
 
 [tasks.dump-debug]

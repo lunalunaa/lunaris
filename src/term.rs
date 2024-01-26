@@ -117,8 +117,19 @@ impl Term {
         self.put_slice(u.numtoa(10, &mut buffer));
     }
 
+    pub fn put_int(&mut self, i: i8) {
+        let mut buffer = [0u8; 20];
+
+        self.put_slice(i.numtoa(10, &mut buffer));
+    }
+
     pub fn put_u_dec_flush(&mut self, u: usize) {
         self.put_u_dec(u);
+        self.flush_all();
+    }
+
+    pub fn put_int_flush(&mut self, i: i8) {
+        self.put_int(i);
         self.flush_all();
     }
 

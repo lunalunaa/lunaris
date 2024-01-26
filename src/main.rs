@@ -3,16 +3,16 @@
 #![feature(asm_const)]
 #![allow(unused)]
 
+mod asm;
 mod boot;
 mod setup;
 mod sys_syscall;
 mod syscall;
 mod tasks;
 mod term;
-mod asm;
 
 use core::{arch::global_asm, panic::PanicInfo};
-use syscall::{Exit, MyTid};
+use syscall::{Create, Exit, MyParentTid, MyTid, Yield};
 use term::TERM_GLOBAL;
 
 #[panic_handler]
@@ -29,15 +29,53 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-fn main() -> ! {
+fn other() -> ! {
+    let tid = MyTid();
+    let parent_tid = MyParentTid();
     unsafe {
-        TERM_GLOBAL.put_slice_flush(b"I am the first task\n");
-        let tid = MyTid();
-        TERM_GLOBAL.put_slice_flush(b"My tid is: ");
-        TERM_GLOBAL.put_u_dec_flush(tid as usize);
+        TERM_GLOBAL.put_slice_flush(b"my task id: ");
+        TERM_GLOBAL.put_int_flush(tid);
+        TERM_GLOBAL.put_slice_flush(b"\nmy parent id: ");
+        TERM_GLOBAL.put_int_flush(parent_tid);
         TERM_GLOBAL.put_slice_flush(b"\n");
-        TERM_GLOBAL.put_slice_flush(b"system call returned!\n");
+
+        Yield();
+        TERM_GLOBAL.put_slice_flush(b"my task id: ");
+        TERM_GLOBAL.put_int_flush(tid);
+        TERM_GLOBAL.put_slice_flush(b"\nmy parent id: ");
+        TERM_GLOBAL.put_int_flush(parent_tid);
+        TERM_GLOBAL.put_slice_flush(b"\n");
     }
 
-    Exit()
+    Exit();
+}
+
+fn main() -> ! {
+    let task_1 = Create(0, other);
+    unsafe {
+        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
+        TERM_GLOBAL.put_int(task_1);
+        TERM_GLOBAL.put_slice(b"\n");
+    }
+    let task_2 = Create(0, other);
+    unsafe {
+        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
+        TERM_GLOBAL.put_int(task_2);
+        TERM_GLOBAL.put_slice(b"\n");
+    }
+    let task_3 = Create(2, other);
+    unsafe {
+        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
+        TERM_GLOBAL.put_int(task_3);
+        TERM_GLOBAL.put_slice(b"\n");
+    }
+    let task_4 = Create(2, other);
+    unsafe {
+        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
+        TERM_GLOBAL.put_int(task_4);
+        TERM_GLOBAL.put_slice_flush(b"\n");
+        TERM_GLOBAL.put_slice_flush(b"First User Task: exiting\n");
+    }
+
+    Exit();
 }

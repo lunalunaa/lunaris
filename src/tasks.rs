@@ -43,7 +43,7 @@ pub struct Context {
 }
 
 impl Context {
-    const fn new() -> Self {
+    const fn new() -> Context {
         Self {
             x19: 0,
             x20: 0,
@@ -75,8 +75,6 @@ pub struct Task {
     pub starting_sp: u64,
     pub fn_ptr: fn() -> !,
 }
-
-static mut KERNEL_SP: u64 = 0x1000;
 
 impl Ord for Task {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
@@ -118,6 +116,7 @@ pub struct Scheduler {
     active_task: Option<Task>,
     ready_queue: BinaryHeap<Task, Max, TASK_SIZE>,
     cnt: usize,
+    num_tasks: u64,
     context: Context,
 }
 
@@ -127,12 +126,17 @@ impl Scheduler {
             active_task: None,
             ready_queue: BinaryHeap::new(),
             cnt: usize::max_value(),
+            num_tasks: 0,
             context: Context::new(),
         }
     }
 
     pub const fn task_num(&self) -> u64 {
-        (usize::max_value() - self.cnt) as u64
+        self.num_tasks
+    }
+
+    pub fn take(&mut self) -> Option<Task> {
+        self.active_task.take()
     }
 
     pub fn curr_active(&self) -> Option<&Task> {
@@ -144,23 +148,22 @@ impl Scheduler {
     }
 
     pub fn create(&mut self, priority: usize, parent: Option<u8>, fn_ptr: fn() -> !) -> i8 {
-        self.cnt -= 1;
-        let id = self.ready_queue.len();
+        self.num_tasks += 1;
         let task = Task {
-            id: id as u8,
+            id: self.num_tasks as u8,
             priority,
-            cnt: self.cnt,
+            cnt: self.cnt - 1,
             parent,
             run_state: TaskRunState::Ready,
             trap_frame: None,
             context: None,
-            kernel_sp: KERNEL_STACK_START - self.task_num() * PER_TASK_KERNEL_STACK_SIZE,
-            starting_sp: USER_STACK_START - self.task_num() * USER_STACK_SIZE,
+            kernel_sp: KERNEL_STACK_START - self.num_tasks * PER_TASK_KERNEL_STACK_SIZE,
+            starting_sp: USER_STACK_START - self.num_tasks * USER_STACK_SIZE,
             fn_ptr,
         };
 
-        if self.ready_queue.push(task).is_ok() {
-            return id as i8;
+        if self.push(task).is_ok() {
+            return self.num_tasks as i8;
         } else {
             return OUT_OF_DESCRIPTORS;
         }
@@ -182,6 +185,10 @@ impl Scheduler {
             fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
         }
 
+        if task.run_state == TaskRunState::Exited {
+            return;
+        }
+
         if task.trap_frame.is_some() {
             unsafe {
                 let frame_ptr = task.trap_frame.unwrap();
@@ -196,9 +203,9 @@ impl Scheduler {
                 if task.context.is_none() {
                     let context = Context::new();
                     task.context = Some(context);
-                    self.active_task = Some(task);
                 }
-                TERM_GLOBAL.put_slice_flush(b"task activated!\n");
+                self.active_task = Some(task);
+                //TERM_GLOBAL.put_slice_flush(b"task activated!\n");
 
                 __switch_to_task(
                     &mut CPU_GLOBAL.context as *mut Context,
@@ -213,14 +220,16 @@ impl Scheduler {
 
     pub fn reschedule(&mut self) {
         let task = self.active_task.take();
-        self.push(task.unwrap()).unwrap();
+        if task.is_some() {
+            self.push(task.unwrap()).unwrap();
+        }
     }
 
     pub fn run(&mut self) {
         loop {
             if let Some(task) = self.schedule() {
                 self.activate(task);
-                unsafe { TERM_GLOBAL.put_slice_flush(b"switched to scheduler\n") };
+                //unsafe { TERM_GLOBAL.put_slice_flush(b"switched to scheduler\n") };
             } else {
                 cpu::asm::wfe(); // wait for event
             }

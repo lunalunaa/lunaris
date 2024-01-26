@@ -7,7 +7,7 @@ pub const EXCEPTION_CODE_YIELD: u64 = 4;
 pub const EXCEPTION_CODE_EXIT: u64 = 5;
 
 #[inline(never)]
-pub fn Create(priority: usize, func: fn()) -> i8 {
+pub fn Create(priority: usize, func: fn() -> !) -> i8 {
     let ret: i32;
     unsafe {
         asm!("svc {}", const EXCEPTION_CODE_CREATE, out("x0") ret);
@@ -34,12 +34,10 @@ pub fn MyParentTid() -> i8 {
 }
 
 #[inline(never)]
-pub fn Yield() -> ! {
+pub fn Yield() {
     unsafe {
         asm!("svc {N}", N = const EXCEPTION_CODE_YIELD);
     }
-
-    loop {}
 }
 
 #[inline(never)]

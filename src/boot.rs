@@ -66,13 +66,7 @@ pub fn el0_setup(func: u64, sp: u64) {
 #[no_mangle]
 extern "C" fn _kmain() -> ! {
     unsafe {
-        TERM_GLOBAL.put_slice_flush(b"EL1 transition success\n");
-        TERM_GLOBAL.put_slice_flush(b"current SPSel: ");
-        TERM_GLOBAL.put_u_dec(cpu::registers::SPSel.get() as usize);
-        TERM_GLOBAL.put_slice_flush(b"\n");
-    };
-    unsafe {
-        CPU_GLOBAL.scheduler.create(0, None, main);
+        CPU_GLOBAL.scheduler.create(1, None, main);
         CPU_GLOBAL.scheduler.run();
     }
     loop {}

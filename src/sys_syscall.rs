@@ -3,7 +3,7 @@ use crate::{
         EXCEPTION_CODE_CREATE, EXCEPTION_CODE_EXIT, EXCEPTION_CODE_MY_PARENT_TID,
         EXCEPTION_CODE_MY_TID, EXCEPTION_CODE_YIELD,
     },
-    tasks::{Context, Task, CPU_GLOBAL},
+    tasks::{Context, Task, TaskRunState, CPU_GLOBAL},
     term::TERM_GLOBAL,
 };
 use aarch64_cpu as cpu;
@@ -61,11 +61,6 @@ unsafe fn kcreate(task: &mut Task) -> i8 {
 }
 
 unsafe fn kmy_tid(task: &mut Task) -> i8 {
-    TERM_GLOBAL.put_slice(b"kernel: kmy_tid called\n");
-    TERM_GLOBAL.flush_all();
-    TERM_GLOBAL.put_slice(b"kernel: my id is: ");
-    TERM_GLOBAL.put_u_dec(task.id as usize);
-    TERM_GLOBAL.put_slice_flush(b"\n");
     return task.id as i8;
 }
 
@@ -78,12 +73,20 @@ unsafe fn kmy_parent_tid(task: &mut Task) -> i8 {
 }
 
 unsafe fn kyield(task: &mut Task) -> i8 {
-    task.trap_frame = None;
     return 0;
 }
 
-unsafe fn kexit(_task: &mut Task) -> i8 {
-    CPU_GLOBAL.scheduler.curr_active().take();
+unsafe fn kexit(task: &mut Task) -> i8 {
+    extern "C" {
+        fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
+    }
+
+    task.run_state = TaskRunState::Exited;
+
+    __switch_to_scheduler(
+        task.context.as_mut().unwrap() as *mut Context,
+        &mut CPU_GLOBAL.context as *mut Context,
+    );
     return 0;
 }
 
@@ -99,7 +102,7 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
         fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
     }
 
-    TERM_GLOBAL.put_slice_flush(b"syscall received\n");
+    //TERM_GLOBAL.put_slice_flush(b"syscall received\n");
 
     let task = CPU_GLOBAL.scheduler.curr_active_mut().unwrap();
     task.trap_frame = Some(exception_frame);
