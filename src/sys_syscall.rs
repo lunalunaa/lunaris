@@ -1,12 +1,11 @@
 use crate::{
-    boot::el0_setup,
     syscall::EXCEPTION_CODE_MY_TID,
     tasks::{Context, Task, CPU_GLOBAL},
     term::TERM_GLOBAL,
 };
 use aarch64_cpu as cpu;
 use core::arch::global_asm;
-use cpu::registers::{Readable, Writeable, ESR_EL1};
+use cpu::registers::{Readable, ESR_EL1};
 
 global_asm!(include_str!("exception.S"));
 
@@ -90,7 +89,6 @@ pub extern "C" fn get_kernel_sp() -> u64 {
 #[no_mangle]
 pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
     extern "C" {
-        fn __syscall_ret();
         fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
     }
 

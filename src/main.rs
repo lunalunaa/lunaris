@@ -1,10 +1,10 @@
 #![no_main]
 #![no_std]
 #![feature(asm_const)]
+#![allow(unused)]
 
-use core::{arch::asm, panic::PanicInfo};
+use core::panic::PanicInfo;
 
-use aarch64_cpu::asm::{self, barrier};
 use syscall::MyTid;
 use term::TERM_GLOBAL;
 mod boot;

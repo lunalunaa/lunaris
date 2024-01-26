@@ -1,7 +1,6 @@
 use core::arch::global_asm;
 
 use aarch64_cpu as cpu;
-use cpu::registers::Writeable;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
 
@@ -186,8 +185,6 @@ impl Scheduler {
             fn __syscall_ret();
             fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
         }
-
-        let task_starting_sp = task.starting_sp;
 
         if task.trap_frame.is_some() {
             unsafe {
