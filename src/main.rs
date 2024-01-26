@@ -15,7 +15,7 @@ global_asm!(include_str!("exception.S"));
 global_asm!(include_str!("switch.S"));
 
 use core::{arch::global_asm, panic::PanicInfo};
-use syscall::MyTid;
+use syscall::{Exit, MyTid};
 use term::TERM_GLOBAL;
 
 #[panic_handler]
@@ -42,5 +42,5 @@ fn main() -> ! {
         TERM_GLOBAL.put_slice_flush(b"system call returned!\n");
     }
 
-    loop {}
+    Exit()
 }

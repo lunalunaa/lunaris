@@ -1,5 +1,8 @@
 use crate::{
-    syscall::EXCEPTION_CODE_MY_TID,
+    syscall::{
+        EXCEPTION_CODE_CREATE, EXCEPTION_CODE_EXIT, EXCEPTION_CODE_MY_PARENT_TID,
+        EXCEPTION_CODE_MY_TID, EXCEPTION_CODE_YIELD,
+    },
     tasks::{Context, Task, CPU_GLOBAL},
     term::TERM_GLOBAL,
 };
@@ -103,6 +106,10 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
     let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
     let ret = match exception_num {
         EXCEPTION_CODE_MY_TID => kmy_tid(task),
+        EXCEPTION_CODE_CREATE => kcreate(task),
+        EXCEPTION_CODE_MY_PARENT_TID => kmy_parent_tid(task),
+        EXCEPTION_CODE_EXIT => kexit(task),
+        EXCEPTION_CODE_YIELD => kyield(task),
         _ => todo!(),
     };
 
