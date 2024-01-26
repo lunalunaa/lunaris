@@ -7,8 +7,6 @@ use aarch64_cpu as cpu;
 use core::arch::global_asm;
 use cpu::registers::{Readable, ESR_EL1};
 
-global_asm!(include_str!("exception.S"));
-
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ExceptionFrame {
@@ -50,7 +48,7 @@ pub struct ExceptionFrame {
     pub elr_dup: u64,
 }
 
-unsafe fn kcreate(task: &Task) -> i8 {
+unsafe fn kcreate(task: &mut Task) -> i8 {
     let trap_frame = &*task.trap_frame.unwrap();
     return CPU_GLOBAL.scheduler.create(
         trap_frame.x0 as usize,
@@ -59,7 +57,7 @@ unsafe fn kcreate(task: &Task) -> i8 {
     );
 }
 
-unsafe fn kmy_tid(task: &Task) -> i8 {
+unsafe fn kmy_tid(task: &mut Task) -> i8 {
     TERM_GLOBAL.put_slice(b"kernel: kmy_tid called\n");
     TERM_GLOBAL.flush_all();
     TERM_GLOBAL.put_slice(b"kernel: my id is: ");
@@ -68,16 +66,22 @@ unsafe fn kmy_tid(task: &Task) -> i8 {
     return task.id as i8;
 }
 
-unsafe fn kmy_parent_tid(task: &Task) -> i8 {
-    todo!()
+unsafe fn kmy_parent_tid(task: &mut Task) -> i8 {
+    if task.parent.is_some() {
+        return task.parent.unwrap() as i8;
+    } else {
+        return -1;
+    }
 }
 
-unsafe fn kyield(task: &Task) -> i8 {
-    todo!()
+unsafe fn kyield(task: &mut Task) -> i8 {
+    task.trap_frame = None;
+    return 0;
 }
 
-unsafe fn kexit(task: &Task) -> i8 {
-    todo!()
+unsafe fn kexit(_task: &mut Task) -> i8 {
+    CPU_GLOBAL.scheduler.curr_active().take();
+    return 0;
 }
 
 #[no_mangle]

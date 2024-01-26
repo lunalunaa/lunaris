@@ -6,11 +6,6 @@ use cpu::{
     registers::{Readable, Writeable, HCR_EL2, SCTLR_EL1, SPSR_EL1, SPSR_EL2, SPSR_EL3},
 };
 
-#[cfg(feature = "default")]
-global_asm!(include_str!("boot_alt.S"));
-#[cfg(feature = "lab")]
-global_asm!(include_str!("boot_lab.S"));
-
 #[inline(always)]
 pub fn wait_forever() -> ! {
     loop {

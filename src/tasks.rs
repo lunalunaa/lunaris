@@ -1,12 +1,8 @@
-use core::arch::global_asm;
-
 use aarch64_cpu as cpu;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
 
 use crate::{boot::el0_setup, sys_syscall::ExceptionFrame, term::TERM_GLOBAL};
-
-global_asm!(include_str!("switch.S"));
 
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
@@ -201,22 +197,23 @@ impl Scheduler {
                     let context = Context::new();
                     task.context = Some(context);
                     self.active_task = Some(task);
-
-                    TERM_GLOBAL.put_slice_flush(b"task activated!\n");
-
-                    __switch_to_task(
-                        &mut CPU_GLOBAL.context as *mut Context,
-                        self.active_task.as_mut().unwrap().context.as_mut().unwrap()
-                            as *mut Context,
-                    );
-
-                    // syscall returns here
-                    // reschedule the task by making it inactive
-                    let task = self.active_task.take();
-                    self.push(task.unwrap()).unwrap();
                 }
+                TERM_GLOBAL.put_slice_flush(b"task activated!\n");
+
+                __switch_to_task(
+                    &mut CPU_GLOBAL.context as *mut Context,
+                    self.active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context,
+                );
+
+                // syscall returns to here
+                self.reschedule();
             }
         }
+    }
+
+    pub fn reschedule(&mut self) {
+        let task = self.active_task.take();
+        self.push(task.unwrap()).unwrap();
     }
 
     pub fn run(&mut self) {

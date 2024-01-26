@@ -3,16 +3,20 @@
 #![feature(asm_const)]
 #![allow(unused)]
 
-use core::panic::PanicInfo;
-
-use syscall::MyTid;
-use term::TERM_GLOBAL;
 mod boot;
 mod setup;
 mod sys_syscall;
 mod syscall;
 mod tasks;
 mod term;
+
+global_asm!(include_str!("boot.S"));
+global_asm!(include_str!("exception.S"));
+global_asm!(include_str!("switch.S"));
+
+use core::{arch::global_asm, panic::PanicInfo};
+use syscall::MyTid;
+use term::TERM_GLOBAL;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
