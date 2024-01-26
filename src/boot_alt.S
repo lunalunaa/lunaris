@@ -35,15 +35,39 @@ _start:
 
 	// If execution reaches here, it is the boot core.
 
+	/*=============================================================*/
+    /*      Enable FP/SIMD at EL1                                  */
+    /*=============================================================*/
+    mov x0, #3 << 20
+    msr cpacr_el1, x0           /* Enable FP/SIMD at EL1 */
+
+	// are we already in EL3?
+    mrs  x9, CurrentEL
+    cmp x9, #12
+    beq drop_el1_secure
+
+    // are we already in EL1
+    cmp x9, #4
+    beq el1_secure
+
+    // otherwise, switch from EL2 to EL1
+    mov x10, #2147483648
+    msr hcr_el2, x10
+
+    mov x11, #709
+    msr spsr_el2, x11
+
+    adr x12, el1_secure
+    msr elr_el2, x12
+
+    ADR_REL	x0, __boot_core_stack_end_exclusive
+    msr SP_EL1, x0 // set the stack pointer for EL1
+
+    eret
+
 drop_el1_secure:
 
 /* Try drop from el3 to el1 secure */
-
-/*=============================================================*/
-/*      Enable FP/SIMD at EL1                                  */
-/*=============================================================*/
-mov x0, #3 << 20
-msr cpacr_el1, x0           /* Enable FP/SIMD at EL1 */
 
 /*=============================================================*/
 /*      Initialize sctlr_el1                                   */

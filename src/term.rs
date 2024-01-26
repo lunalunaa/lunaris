@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use crate::setup::UART;
 use heapless::String;
 use numtoa::NumToA;

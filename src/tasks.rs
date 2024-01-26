@@ -72,7 +72,7 @@ pub struct Task {
     pub id: u8,
     pub priority: usize,
     pub cnt: usize,
-    pub parent: Option<&'static Task>,
+    pub parent: Option<u8>,
     pub run_state: TaskRunState,
     pub trap_frame: Option<*mut ExceptionFrame>,
     pub context: Option<Context>,
@@ -148,12 +148,7 @@ impl Scheduler {
         self.active_task.as_mut()
     }
 
-    pub fn create(
-        &mut self,
-        priority: usize,
-        parent: Option<&'static Task>,
-        fn_ptr: fn() -> !,
-    ) -> i8 {
+    pub fn create(&mut self, priority: usize, parent: Option<u8>, fn_ptr: fn() -> !) -> i8 {
         self.cnt -= 1;
         let id = self.ready_queue.len();
         let task = Task {
@@ -231,7 +226,7 @@ impl Scheduler {
         loop {
             if let Some(task) = self.schedule() {
                 self.activate(task);
-                unsafe { TERM_GLOBAL.put_slice_flush(b"switched to scheduler") };
+                unsafe { TERM_GLOBAL.put_slice_flush(b"switched to scheduler\n") };
             } else {
                 cpu::asm::wfe(); // wait for event
             }

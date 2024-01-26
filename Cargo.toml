@@ -25,5 +25,5 @@ default = []
 lab = []
 
 [profile.release]
-strip = true
 lto = true
+strip = true

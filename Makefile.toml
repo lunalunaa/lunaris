@@ -58,12 +58,12 @@ alias = "qemu"
 extend = "qemu"
 dependencies = ["image-release"]
 
-[tasks.qemu-efi-debug]
+[tasks.qemu-elf-debug]
 command = "qemu-system-aarch64"
 args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/debug/lunaris", "-d", "int"]
 dependencies = ["build-debug"]
 
-[tasks.qemu-efi-release]
+[tasks.qemu-elf-release]
 command = "qemu-system-aarch64"
 args = ["-M", "raspi3b", "-m", "1024", "-serial", "mon:stdio", "-nographic", "-kernel", "target/aarch64-unknown-none/release/lunaris", "-d", "int"]
 dependencies = ["build-release"]

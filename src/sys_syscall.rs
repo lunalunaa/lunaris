@@ -32,6 +32,16 @@ pub struct ExceptionFrame {
     pub x16: u64,
     pub x17: u64,
     pub x18: u64,
+    pub x19: u64,
+    pub x20: u64,
+    pub x21: u64,
+    pub x22: u64,
+    pub x23: u64,
+    pub x24: u64,
+    pub x25: u64,
+    pub x26: u64,
+    pub x27: u64,
+    pub x28: u64,
     pub x29: u64,
     pub x30: u64,
     pub xzr: u64,
@@ -41,16 +51,21 @@ pub struct ExceptionFrame {
     pub elr_dup: u64,
 }
 
-fn kcreate(task: &Task) -> i8 {
-    todo!()
+unsafe fn kcreate(task: &Task) -> i8 {
+    let trap_frame = &*task.trap_frame.unwrap();
+    return CPU_GLOBAL.scheduler.create(
+        trap_frame.x0 as usize,
+        Some(task.id),
+        core::mem::transmute(trap_frame.x1),
+    );
 }
 
 unsafe fn kmy_tid(task: &Task) -> i8 {
-    TERM_GLOBAL.put_slice(b"my_tid called\n");
+    TERM_GLOBAL.put_slice(b"kernel: kmy_tid called\n");
     TERM_GLOBAL.flush_all();
-    TERM_GLOBAL.put_slice(b"my_id is: ");
+    TERM_GLOBAL.put_slice(b"kernel: my id is: ");
     TERM_GLOBAL.put_u_dec(task.id as usize);
-    TERM_GLOBAL.flush_all();
+    TERM_GLOBAL.put_slice_flush(b"\n");
     return task.id as i8;
 }
 
@@ -73,10 +88,10 @@ pub extern "C" fn get_kernel_sp() -> u64 {
 
 /// Look up which syscall to excute and excute it
 #[no_mangle]
-pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) {
+pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
     extern "C" {
         fn __syscall_ret();
-        fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context);
+        fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
     }
 
     TERM_GLOBAL.put_slice_flush(b"syscall received\n");

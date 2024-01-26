@@ -2,8 +2,9 @@
 #![no_std]
 #![feature(asm_const)]
 
-use core::panic::PanicInfo;
+use core::{arch::asm, panic::PanicInfo};
 
+use aarch64_cpu::asm::{self, barrier};
 use syscall::MyTid;
 use term::TERM_GLOBAL;
 mod boot;
@@ -30,8 +31,8 @@ fn panic(info: &PanicInfo) -> ! {
 fn main() -> ! {
     unsafe {
         TERM_GLOBAL.put_slice_flush(b"I am the first task\n");
-        TERM_GLOBAL.put_slice_flush(b"My tid is: ");
         let tid = MyTid();
+        TERM_GLOBAL.put_slice_flush(b"My tid is: ");
         TERM_GLOBAL.put_u_dec_flush(tid as usize);
         TERM_GLOBAL.put_slice_flush(b"\n");
         TERM_GLOBAL.put_slice_flush(b"system call returned!\n");
