@@ -9,10 +9,7 @@ mod sys_syscall;
 mod syscall;
 mod tasks;
 mod term;
-
-global_asm!(include_str!("boot.S"));
-global_asm!(include_str!("exception.S"));
-global_asm!(include_str!("switch.S"));
+mod asm;
 
 use core::{arch::global_asm, panic::PanicInfo};
 use syscall::{Exit, MyTid};
