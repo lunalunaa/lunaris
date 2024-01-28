@@ -25,4 +25,5 @@ default = []
 lab = []
 
 [profile.release]
-strip = "symbols"
+codegen-units = 1
+lto = "fat"

@@ -50,7 +50,6 @@ curr_el_sp0_sync:
 
 __syscall_handler:
     // we are using user stack rn
-
     msr SPSel, #0 // let the kernel use SP_EL0
     sub sp, sp, #288
     stp x0, x1, [sp, #0]
@@ -80,13 +79,12 @@ __syscall_handler:
     mov x0, sp
     msr SPSel, #1
     mov sp, x1
+    isb sy
+    dsb sy
     bl syscall
 
 __syscall_ret:
     msr SPSel, #0
-    ldp x0, x1, [sp, #256]
-    msr ESR_EL1, x0
-    msr SPSR_EL1, x1
     ldp x0, x1, [sp, #0]
     ldp x2, x3, [sp, #16]
     ldp x4, x5, [sp, #32]
@@ -104,7 +102,8 @@ __syscall_ret:
     ldp x28, x29, [sp, #224]
     ldp x30, xzr, [sp, #240]
     add sp, sp, #288
-    isb
+    isb sy
+    dsb sy
     eret
 
 .global vector_table_start

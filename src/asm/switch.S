@@ -21,6 +21,8 @@ __switch_to_task:
     ldp x29, x30, [x1, #80]
     ldr x2, [x1, #96]
     mov sp, x2
+    isb sy
+    dsb sy
     eret
 
 __switch_to_scheduler:
@@ -42,6 +44,8 @@ __switch_to_scheduler:
     ldp x29, x30, [x1, #80]
     ldr x2, [x1, #96]
     mov sp, x2
+    isb sy
+    dsb sy
     ret
 
 .global __switch_to_task

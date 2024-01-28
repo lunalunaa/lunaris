@@ -117,7 +117,6 @@ pub struct Scheduler {
     ready_queue: BinaryHeap<Task, Max, TASK_SIZE>,
     cnt: usize,
     num_tasks: u64,
-    context: Context,
 }
 
 impl Scheduler {
@@ -127,7 +126,6 @@ impl Scheduler {
             ready_queue: BinaryHeap::new(),
             cnt: usize::max_value(),
             num_tasks: 0,
-            context: Context::new(),
         }
     }
 
@@ -181,7 +179,7 @@ impl Scheduler {
 
     pub fn activate(&mut self, mut task: Task) {
         extern "C" {
-            fn __syscall_ret();
+            fn __syscall_ret() -> !;
             fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
         }
 
@@ -192,7 +190,8 @@ impl Scheduler {
         if task.trap_frame.is_some() {
             unsafe {
                 let frame_ptr = task.trap_frame.unwrap();
-                el0_setup((*frame_ptr).elr, frame_ptr as u64);
+                let frame = &*frame_ptr;
+                el0_setup(frame.elr, frame_ptr as u64);
                 self.active_task = Some(task);
                 __syscall_ret();
             }
@@ -205,7 +204,6 @@ impl Scheduler {
                     task.context = Some(context);
                 }
                 self.active_task = Some(task);
-                //TERM_GLOBAL.put_slice_flush(b"task activated!\n");
 
                 __switch_to_task(
                     &mut CPU_GLOBAL.context as *mut Context,
@@ -229,7 +227,6 @@ impl Scheduler {
         loop {
             if let Some(task) = self.schedule() {
                 self.activate(task);
-                //unsafe { TERM_GLOBAL.put_slice_flush(b"switched to scheduler\n") };
             } else {
                 cpu::asm::wfe(); // wait for event
             }

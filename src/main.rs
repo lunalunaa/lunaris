@@ -53,26 +53,26 @@ fn other() -> ! {
 fn main() -> ! {
     let task_1 = Create(0, other);
     unsafe {
-        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
+        TERM_GLOBAL.put_slice_flush(b"Created: ");
         TERM_GLOBAL.put_int(task_1);
-        TERM_GLOBAL.put_slice(b"\n");
+        TERM_GLOBAL.put_slice_flush(b"\n");
     }
     let task_2 = Create(0, other);
     unsafe {
-        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
-        TERM_GLOBAL.put_int(task_2);
-        TERM_GLOBAL.put_slice(b"\n");
+        TERM_GLOBAL.put_slice_flush(b"Created: ");
+        TERM_GLOBAL.put_int_flush(task_2);
+        TERM_GLOBAL.put_slice_flush(b"\n");
     }
     let task_3 = Create(2, other);
     unsafe {
-        TERM_GLOBAL.put_slice_flush(b"Crearted: ");
-        TERM_GLOBAL.put_int(task_3);
+        TERM_GLOBAL.put_slice_flush(b"Created: ");
+        TERM_GLOBAL.put_int_flush(task_3);
         TERM_GLOBAL.put_slice(b"\n");
     }
     let task_4 = Create(2, other);
     unsafe {
         TERM_GLOBAL.put_slice_flush(b"Crearted: ");
-        TERM_GLOBAL.put_int(task_4);
+        TERM_GLOBAL.put_int_flush(task_4);
         TERM_GLOBAL.put_slice_flush(b"\n");
         TERM_GLOBAL.put_slice_flush(b"First User Task: exiting\n");
     }

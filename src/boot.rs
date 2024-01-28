@@ -47,7 +47,6 @@ unsafe fn exception_setup() {
 }
 
 /// Sets up the ELR_EL1 and SP_EL0
-#[inline(always)]
 pub fn el0_setup(func: u64, sp: u64) {
     cpu::registers::SPSR_EL1.write(
         SPSR_EL1::A::Masked

@@ -6,44 +6,39 @@ pub const EXCEPTION_CODE_MY_PARENT_TID: u64 = 3;
 pub const EXCEPTION_CODE_YIELD: u64 = 4;
 pub const EXCEPTION_CODE_EXIT: u64 = 5;
 
-#[inline(never)]
 pub fn Create(priority: usize, func: fn() -> !) -> i8 {
-    let ret: i32;
+    let mut ret: i8;
     unsafe {
-        asm!("svc {}", const EXCEPTION_CODE_CREATE, out("x0") ret);
+        asm!("svc {}", const EXCEPTION_CODE_CREATE, in("x0") priority, in("x1") func, lateout("x0") ret);
     }
-    return ret as i8;
+    return ret;
 }
 
-#[inline(never)]
 pub fn MyTid() -> i8 {
-    let ret: i32;
+    let mut ret: i8;
     unsafe {
         asm!("svc {}", const EXCEPTION_CODE_MY_TID, out("x0") ret);
     }
-    return ret as i8;
+    return ret;
 }
 
-#[inline(never)]
 pub fn MyParentTid() -> i8 {
-    let ret: i32;
+    let mut ret: i8;
     unsafe {
         asm!("svc {}", const EXCEPTION_CODE_MY_PARENT_TID, out("x0") ret);
     }
-    return ret as i8;
+    return ret;
 }
 
-#[inline(never)]
 pub fn Yield() {
     unsafe {
-        asm!("svc {N}", N = const EXCEPTION_CODE_YIELD);
+        asm!("svc {}", const EXCEPTION_CODE_YIELD);
     }
 }
 
-#[inline(never)]
 pub fn Exit() -> ! {
     unsafe {
-        asm!("svc {N}", N = const EXCEPTION_CODE_EXIT);
+        asm!("svc {}", const EXCEPTION_CODE_EXIT);
     }
 
     loop {}

@@ -102,11 +102,9 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
         fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
     }
 
-    //TERM_GLOBAL.put_slice_flush(b"syscall received\n");
-
     let task = CPU_GLOBAL.scheduler.curr_active_mut().unwrap();
-    task.trap_frame = Some(exception_frame);
     let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
+    task.trap_frame = Some(exception_frame);
     let ret = match exception_num {
         EXCEPTION_CODE_MY_TID => kmy_tid(task),
         EXCEPTION_CODE_CREATE => kcreate(task),
@@ -116,7 +114,7 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
         _ => todo!(),
     };
 
-    let frame = unsafe { &mut *exception_frame };
+    let frame = &mut *exception_frame;
     frame.x0 = ret as u64;
 
     __switch_to_scheduler(
