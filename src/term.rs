@@ -1,4 +1,4 @@
-use core::arch::asm;
+use core::{arch::asm, fmt, panic::PanicInfo};
 
 use crate::setup::UART;
 use heapless::String;
@@ -140,3 +140,42 @@ impl Term {
 }
 
 pub static mut TERM_GLOBAL: Lazy<Term> = Lazy::new(|| Term::init());
+
+impl fmt::Write for Term {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        unsafe { TERM_GLOBAL.put_slice_flush(s.as_bytes()) }
+        Ok(())
+    }
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {{
+        unsafe {
+            use core::fmt::Write;
+            let _ = write!(crate::term::TERM_GLOBAL, $($arg)*);
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! println {
+    ($($arg:tt)*) => {{
+        unsafe {
+            use core::fmt::Write;
+            let _ = writeln!(crate::term::TERM_GLOBAL, $($arg)*);
+        }
+    }};
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    println!("panicked");
+    println!(
+        "file = {}, line = {}",
+        info.location().unwrap().file(),
+        info.location().unwrap().line()
+    );
+
+    loop {}
+}

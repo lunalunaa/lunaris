@@ -4,10 +4,8 @@ use crate::{
         EXCEPTION_CODE_MY_TID, EXCEPTION_CODE_YIELD,
     },
     tasks::{Context, Task, TaskRunState, CPU_GLOBAL},
-    term::TERM_GLOBAL,
 };
 use aarch64_cpu as cpu;
-use core::arch::global_asm;
 use cpu::registers::{Readable, ESR_EL1};
 
 #[repr(C)]
@@ -48,27 +46,27 @@ pub struct ExceptionFrame {
     pub esr: u64,
     pub spsr: u64,
     pub elr: u64,
-    pub elr_dup: u64,
+    pub _elr_dup: u64,
 }
 
 unsafe fn kcreate(task: &mut Task) -> i8 {
     let trap_frame = &*task.trap_frame.unwrap();
-    return CPU_GLOBAL.scheduler.create(
+    CPU_GLOBAL.scheduler.create(
         trap_frame.x0 as usize,
         Some(task.id),
         core::mem::transmute(trap_frame.x1),
-    );
+    )
 }
 
 unsafe fn kmy_tid(task: &mut Task) -> i8 {
-    return task.id as i8;
+    task.id as i8
 }
 
 unsafe fn kmy_parent_tid(task: &mut Task) -> i8 {
-    if task.parent.is_some() {
-        return task.parent.unwrap() as i8;
+    if let Some(parent) = task.parent {
+        parent as i8
     } else {
-        return -1;
+        -1
     }
 }
 
@@ -91,8 +89,8 @@ unsafe fn kexit(task: &mut Task) -> i8 {
 }
 
 #[no_mangle]
-pub extern "C" fn get_kernel_sp() -> u64 {
-    unsafe { CPU_GLOBAL.scheduler.curr_active().unwrap().kernel_sp }
+pub unsafe extern "C" fn get_kernel_sp() -> u64 {
+    CPU_GLOBAL.scheduler.curr_active().unwrap().kernel_sp
 }
 
 /// Look up which syscall to excute and excute it
@@ -103,7 +101,7 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
     }
 
     let task = CPU_GLOBAL.scheduler.curr_active_mut().unwrap();
-    let exception_num = cpu::registers::ESR_EL1.read(ESR_EL1::ISS);
+    let exception_num = ESR_EL1.read(ESR_EL1::ISS);
     task.trap_frame = Some(exception_frame);
     let ret = match exception_num {
         EXCEPTION_CODE_MY_TID => kmy_tid(task),

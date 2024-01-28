@@ -2,7 +2,7 @@ use aarch64_cpu as cpu;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
 
-use crate::{boot::el0_setup, sys_syscall::ExceptionFrame, term::TERM_GLOBAL};
+use crate::{boot::el0_setup, sys_syscall::ExceptionFrame};
 
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
@@ -21,8 +21,6 @@ pub enum TaskRunState {
     ReplyBlocked,
     EventBlocked,
 }
-
-pub enum Request {}
 
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
