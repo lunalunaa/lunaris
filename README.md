@@ -1,0 +1,1 @@
+TODO: use mutexes instead of global statics
