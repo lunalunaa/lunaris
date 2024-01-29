@@ -81,16 +81,23 @@ unsafe fn kexit(task: &mut Task) -> i8 {
 
     task.run_state = TaskRunState::Exited;
 
+    let mut cpu_context = CPU_GLOBAL.context.lock();
+    let cpu_context_ptr = &mut *cpu_context as *mut Context;
+    core::mem::drop(cpu_context);
+    CPU_GLOBAL.scheduler.active_task.force_unlock();
     __switch_to_scheduler(
         task.context.as_mut().unwrap() as *mut Context,
-        &mut CPU_GLOBAL.context as *mut Context,
+        cpu_context_ptr,
     );
     return 0;
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_kernel_sp() -> u64 {
-    CPU_GLOBAL.scheduler.curr_active().unwrap().kernel_sp
+pub extern "C" fn get_kernel_sp() -> u64 {
+    let active_task = CPU_GLOBAL.scheduler.active_task.lock();
+    let ret = active_task.as_ref().unwrap().kernel_sp;
+    core::mem::drop(active_task);
+    return ret;
 }
 
 /// Look up which syscall to excute and excute it
@@ -100,25 +107,27 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
         fn __switch_to_scheduler(old_context: *mut Context, new_context: *mut Context) -> !;
     }
 
-    let task = CPU_GLOBAL.scheduler.curr_active_mut().unwrap();
+    let mut task = CPU_GLOBAL.scheduler.active_task.lock();
     let exception_num = ESR_EL1.read(ESR_EL1::ISS);
-    task.trap_frame = Some(exception_frame);
+    task.as_mut().unwrap().trap_frame = Some(exception_frame);
     let ret = match exception_num {
-        EXCEPTION_CODE_MY_TID => kmy_tid(task),
-        EXCEPTION_CODE_CREATE => kcreate(task),
-        EXCEPTION_CODE_MY_PARENT_TID => kmy_parent_tid(task),
-        EXCEPTION_CODE_EXIT => kexit(task),
-        EXCEPTION_CODE_YIELD => kyield(task),
+        EXCEPTION_CODE_MY_TID => kmy_tid(task.as_mut().unwrap()),
+        EXCEPTION_CODE_CREATE => kcreate(task.as_mut().unwrap()),
+        EXCEPTION_CODE_MY_PARENT_TID => kmy_parent_tid(task.as_mut().unwrap()),
+        EXCEPTION_CODE_EXIT => kexit(task.as_mut().unwrap()),
+        EXCEPTION_CODE_YIELD => kyield(task.as_mut().unwrap()),
         _ => todo!(),
     };
 
     let frame = &mut *exception_frame;
     frame.x0 = ret as u64;
 
-    __switch_to_scheduler(
-        task.context.as_mut().unwrap() as *mut Context,
-        &mut CPU_GLOBAL.context as *mut Context,
-    );
+    let task_context = task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
+    let mut cpu_context = CPU_GLOBAL.context.lock();
+    let cpu_context_ptr = &mut *cpu_context as *mut Context;
+    core::mem::drop(cpu_context);
+    core::mem::drop(task);
+    __switch_to_scheduler(task_context, cpu_context_ptr);
 }
 
 // todo: kernel stack needs to be restored

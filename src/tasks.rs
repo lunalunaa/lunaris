@@ -1,8 +1,9 @@
 use aarch64_cpu as cpu;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
+use spin::Mutex;
 
-use crate::{boot::el0_setup, sys_syscall::ExceptionFrame};
+use crate::{boot::el0_setup, println, sys_syscall::ExceptionFrame};
 
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
@@ -96,86 +97,78 @@ impl PartialEq for Task {
 
 pub struct CPU {
     pub scheduler: Scheduler,
-    pub context: Context,
+    pub context: Mutex<Context>,
 }
 
 impl CPU {
     const fn init() -> Self {
         Self {
             scheduler: Scheduler::new(),
-            context: Context::new(),
+            context: Mutex::new(Context::new()),
         }
     }
 }
 
-pub static mut CPU_GLOBAL: CPU = CPU::init();
+unsafe impl Send for CPU {}
+unsafe impl Sync for CPU {}
+
+pub static CPU_GLOBAL: CPU = CPU::init();
 
 pub struct Scheduler {
-    active_task: Option<Task>,
-    ready_queue: BinaryHeap<Task, Max, TASK_SIZE>,
+    pub active_task: Mutex<Option<Task>>,
+    ready_queue: Mutex<BinaryHeap<Task, Max, TASK_SIZE>>,
     cnt: usize,
-    num_tasks: u64,
+    num_tasks: Mutex<u64>,
 }
 
 impl Scheduler {
     pub const fn new() -> Self {
         Scheduler {
-            active_task: None,
-            ready_queue: BinaryHeap::new(),
+            active_task: Mutex::new(None),
+            ready_queue: Mutex::new(BinaryHeap::new()),
             cnt: usize::max_value(),
-            num_tasks: 0,
+            num_tasks: Mutex::new(0),
         }
     }
 
-    pub const fn task_num(&self) -> u64 {
-        self.num_tasks
+    pub fn task_num(&self) -> u64 {
+        *self.num_tasks.lock()
     }
 
-    pub fn take(&mut self) -> Option<Task> {
-        self.active_task.take()
-    }
-
-    pub fn curr_active(&self) -> Option<&Task> {
-        self.active_task.as_ref()
-    }
-
-    pub fn curr_active_mut(&mut self) -> Option<&mut Task> {
-        self.active_task.as_mut()
-    }
-
-    pub fn create(&mut self, priority: usize, parent: Option<u8>, fn_ptr: fn() -> !) -> i8 {
-        self.num_tasks += 1;
+    pub fn create(&self, priority: usize, parent: Option<u8>, fn_ptr: fn() -> !) -> i8 {
+        let mut num = self.num_tasks.lock();
+        *num += 1;
         let task = Task {
-            id: self.num_tasks as u8,
+            id: *num as u8,
             priority,
             cnt: self.cnt - 1,
             parent,
             run_state: TaskRunState::Ready,
             trap_frame: None,
             context: None,
-            kernel_sp: KERNEL_STACK_START - self.num_tasks * PER_TASK_KERNEL_STACK_SIZE,
-            starting_sp: USER_STACK_START - self.num_tasks * USER_STACK_SIZE,
+            kernel_sp: KERNEL_STACK_START - *num * PER_TASK_KERNEL_STACK_SIZE,
+            starting_sp: USER_STACK_START - *num * USER_STACK_SIZE,
             fn_ptr,
         };
 
         if self.push(task).is_ok() {
-            return self.num_tasks as i8;
+            return *num as i8;
         } else {
             return OUT_OF_DESCRIPTORS;
         }
     }
 
-    pub fn push(&mut self, mut task: Task) -> Result<(), Task> {
+    pub fn push(&self, mut task: Task) -> Result<(), Task> {
         task.cnt -= 1;
-        self.ready_queue.push(task)
+        self.ready_queue.lock().push(task)
     }
 
     /// Check the priority of the current running task and the task to be scheduled.
-    pub fn schedule(&mut self) -> Option<Task> {
-        return self.ready_queue.pop();
+    pub fn schedule(&self) -> Option<Task> {
+        self.ready_queue.lock().pop()
     }
 
-    pub fn activate(&mut self, mut task: Task) {
+    pub fn activate(&self, mut task: Task) {
         extern "C" {
             fn __syscall_ret() -> !;
             fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
@@ -190,7 +183,9 @@ impl Scheduler {
                 let frame_ptr = task.trap_frame.unwrap();
                 let frame = &*frame_ptr;
                 el0_setup(frame.elr, frame_ptr as u64);
-                self.active_task = Some(task);
+                let mut active_task = self.active_task.lock();
+                *active_task = Some(task);
+                core::mem::drop(active_task);
                 __syscall_ret();
             }
         } else {
@@ -201,12 +196,15 @@ impl Scheduler {
                     let context = Context::new();
                     task.context = Some(context);
                 }
-                self.active_task = Some(task);
-
-                __switch_to_task(
-                    &mut CPU_GLOBAL.context as *mut Context,
-                    self.active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context,
-                );
+                let mut active_task = self.active_task.lock();
+                *active_task = Some(task);
+                let active_task_context =
+                    active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
+                let mut cpu_context = CPU_GLOBAL.context.lock();
+                let cpu_context_ptr = &mut *cpu_context as *mut Context;
+                core::mem::drop(active_task);
+                core::mem::drop(cpu_context);
+                __switch_to_task(cpu_context_ptr, active_task_context);
 
                 // syscall returns to here
                 self.reschedule();
@@ -214,14 +212,14 @@ impl Scheduler {
         }
     }
 
-    pub fn reschedule(&mut self) {
-        let task = self.active_task.take();
+    pub fn reschedule(&self) {
+        let task = self.active_task.lock().take();
         if task.is_some() {
             self.push(task.unwrap()).unwrap();
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&self) {
         loop {
             if let Some(task) = self.schedule() {
                 self.activate(task);
