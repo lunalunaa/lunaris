@@ -85,6 +85,8 @@ __syscall_handler:
 
 __syscall_ret:
     msr SPSel, #0
+    ldr x0, [sp, #264]
+    msr SPSR_EL1, x0
     ldp x0, x1, [sp, #0]
     ldp x2, x3, [sp, #16]
     ldp x4, x5, [sp, #32]

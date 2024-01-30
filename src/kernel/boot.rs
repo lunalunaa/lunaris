@@ -31,7 +31,7 @@ pub fn el0_setup(func: u64, sp: u64) {
             + SPSR_EL1::F::Masked
             + SPSR_EL1::M::EL0t
             + SPSR_EL1::I::Masked
-            + SPSR_EL1::D::Unmasked,
+            + SPSR_EL1::D::Masked,
     );
     ELR_EL1.set(func);
     SP_EL0.set(sp);

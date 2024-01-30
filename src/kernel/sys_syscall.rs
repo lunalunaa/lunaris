@@ -111,13 +111,14 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
 
     let mut task = CPU_GLOBAL.scheduler.active_task.lock();
     let exception_num = ESR_EL1.read(ESR_EL1::ISS);
-    task.as_mut().unwrap().trap_frame = Some(exception_frame);
+    let task_ref = task.as_mut().unwrap();
+    task_ref.trap_frame = Some(exception_frame);
     let ret = match exception_num {
-        EXCEPTION_CODE_MY_TID => kmy_tid(task.as_mut().unwrap()),
-        EXCEPTION_CODE_CREATE => kcreate(task.as_mut().unwrap()),
-        EXCEPTION_CODE_MY_PARENT_TID => kmy_parent_tid(task.as_mut().unwrap()),
-        EXCEPTION_CODE_EXIT => kexit(task.as_mut().unwrap()),
-        EXCEPTION_CODE_YIELD => kyield(task.as_mut().unwrap()),
+        EXCEPTION_CODE_MY_TID => kmy_tid(task_ref),
+        EXCEPTION_CODE_CREATE => kcreate(task_ref),
+        EXCEPTION_CODE_MY_PARENT_TID => kmy_parent_tid(task_ref),
+        EXCEPTION_CODE_EXIT => kexit(task_ref),
+        EXCEPTION_CODE_YIELD => kyield(task_ref),
         _ => todo!(),
     };
 
@@ -127,8 +128,10 @@ pub unsafe extern "C" fn syscall(exception_frame: *mut ExceptionFrame) -> ! {
     let task_context = task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
     let mut cpu_context = CPU_GLOBAL.context.lock();
     let cpu_context_ptr = &mut *cpu_context as *mut Context;
+
     core::mem::drop(cpu_context);
     core::mem::drop(task);
+
     __switch_to_scheduler(task_context, cpu_context_ptr);
 }
 
