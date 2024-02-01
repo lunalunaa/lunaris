@@ -171,7 +171,7 @@ register_structs! {
 
 pub struct MMIODeRefWrapper<T> {
     start_addr: usize,
-    phantom: PhantomData<fn() -> T>,
+    phantom: PhantomData<T>,
 }
 
 impl<T> MMIODeRefWrapper<T> {

@@ -41,7 +41,7 @@ pub fn el0_setup(func: u64, sp: u64) {
 }
 
 #[no_mangle]
-extern "C" fn _kmain() -> ! {
+unsafe extern "C" fn _kmain() -> ! {
     CPU_GLOBAL.scheduler.create(1, None, main::main);
     CPU_GLOBAL.scheduler.run();
     wait_forever()

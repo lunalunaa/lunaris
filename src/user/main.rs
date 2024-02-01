@@ -1,8 +1,3 @@
-#![no_main]
-#![no_std]
-#![feature(asm_const)]
-#![allow(unused)]
-
 use crate::{
     kernel::syscall::{Create, Exit, MyParentTid, MyTid, Yield},
     println,

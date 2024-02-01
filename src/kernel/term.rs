@@ -1,4 +1,4 @@
-use core::{arch::asm, fmt, panic::PanicInfo};
+use core::{cell::RefCell, fmt, ops::Deref, panic::PanicInfo};
 
 use super::setup::UART;
 use heapless::String;
@@ -139,11 +139,24 @@ impl Term {
     }
 }
 
-pub static mut TERM_GLOBAL: Lazy<Term> = Lazy::new(Term::init);
+pub struct NullLock<T>(RefCell<T>);
+
+impl<T> Deref for NullLock<T> {
+    type Target = RefCell<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+unsafe impl<T> Sync for NullLock<T> {}
+unsafe impl<T> Send for NullLock<T> {}
+
+pub static TERM_GLOBAL: NullLock<Lazy<Term>> = NullLock(RefCell::new(Lazy::new(Term::init)));
 
 impl fmt::Write for Term {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        unsafe { TERM_GLOBAL.put_slice_flush(s.as_bytes()) }
+        self.put_slice_flush(s.as_bytes());
         Ok(())
     }
 }
@@ -151,20 +164,17 @@ impl fmt::Write for Term {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
-        unsafe {
             use core::fmt::Write;
-            let _ = write!($crate::kernel::term::TERM_GLOBAL, $($arg)*);
-        }
+            let _ = write!($crate::kernel::term::TERM_GLOBAL.borrow_mut(), $($arg)*);
     }};
 }
 
 #[macro_export]
+#[allow(unsafe_code)]
 macro_rules! println {
     ($($arg:tt)*) => {{
-        unsafe {
             use core::fmt::Write;
-            let _ = writeln!($crate::kernel::term::TERM_GLOBAL, $($arg)*);
-        }
+            let _ = writeln!($crate::kernel::term::TERM_GLOBAL.borrow_mut(), $($arg)*);
     }};
 }
 

@@ -168,7 +168,7 @@ impl Scheduler {
         self.ready_queue.lock().pop()
     }
 
-    pub fn activate(&self, mut task: Task) {
+    pub unsafe fn activate(&self, mut task: Task) {
         extern "C" {
             fn __syscall_ret() -> !;
             fn __switch_to_task(old_context: *mut Context, new_context: *mut Context);
@@ -179,36 +179,32 @@ impl Scheduler {
         }
 
         if task.trap_frame.is_some() {
-            unsafe {
-                let frame_ptr = task.trap_frame.unwrap();
-                let frame = &*frame_ptr;
-                el0_setup(frame.elr, frame_ptr as u64);
-                let mut active_task = self.active_task.lock();
-                *active_task = Some(task);
-                core::mem::drop(active_task);
-                __syscall_ret();
-            }
+            let frame_ptr = task.trap_frame.unwrap();
+            let frame = &*frame_ptr;
+            el0_setup(frame.elr, frame_ptr as u64);
+            let mut active_task = self.active_task.lock();
+            *active_task = Some(task);
+            core::mem::drop(active_task);
+            __syscall_ret();
         } else {
-            unsafe {
-                let task_starting_sp = task.starting_sp;
-                el0_setup(task.fn_ptr as u64, task_starting_sp);
-                if task.context.is_none() {
-                    let context = Context::new();
-                    task.context = Some(context);
-                }
-                let mut active_task = self.active_task.lock();
-                *active_task = Some(task);
-                let active_task_context =
-                    active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
-                let mut cpu_context = CPU_GLOBAL.context.lock();
-                let cpu_context_ptr = &mut *cpu_context as *mut Context;
-                core::mem::drop(active_task);
-                core::mem::drop(cpu_context);
-                __switch_to_task(cpu_context_ptr, active_task_context);
-
-                // syscall returns to here
-                self.reschedule();
+            let task_starting_sp = task.starting_sp;
+            el0_setup(task.fn_ptr as u64, task_starting_sp);
+            if task.context.is_none() {
+                let context = Context::new();
+                task.context = Some(context);
             }
+            let mut active_task = self.active_task.lock();
+            *active_task = Some(task);
+            let active_task_context =
+                active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
+            let mut cpu_context = CPU_GLOBAL.context.lock();
+            let cpu_context_ptr = &mut *cpu_context as *mut Context;
+            core::mem::drop(active_task);
+            core::mem::drop(cpu_context);
+            __switch_to_task(cpu_context_ptr, active_task_context);
+
+            // syscall returns to here
+            self.reschedule();
         }
     }
 
@@ -219,7 +215,7 @@ impl Scheduler {
         }
     }
 
-    pub fn run(&self) {
+    pub unsafe fn run(&self) {
         loop {
             if let Some(task) = self.schedule() {
                 self.activate(task);
