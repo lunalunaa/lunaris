@@ -1,9 +1,9 @@
+use crate::kernel::boot::el0_setup;
+use crate::kernel::sys_syscall::ExceptionFrame;
+use crate::kernel::utils::Spinlock as Mutex;
 use aarch64_cpu as cpu;
 use derive_more::Constructor;
 use heapless::{binary_heap::Max, BinaryHeap};
-use spin::Mutex;
-
-use super::{boot::el0_setup, sys_syscall::ExceptionFrame};
 
 const TASK_SIZE: usize = 50;
 const OUT_OF_DESCRIPTORS: i8 = -2;
