@@ -71,7 +71,7 @@ unsafe fn kmy_parent_tid(task: &mut Task) -> i8 {
 }
 
 unsafe fn kyield(task: &mut Task) -> i8 {
-    return 0;
+    0
 }
 
 unsafe fn kexit(task: &mut Task) -> i8 {
@@ -91,7 +91,7 @@ unsafe fn kexit(task: &mut Task) -> i8 {
         task.context.as_mut().unwrap() as *mut Context,
         cpu_context_ptr,
     );
-    return 0;
+    0
 }
 
 #[no_mangle]
@@ -99,7 +99,7 @@ pub extern "C" fn get_kernel_sp() -> u64 {
     let active_task = CPU_GLOBAL.scheduler.active_task.lock();
     let ret = active_task.as_ref().unwrap().kernel_sp;
     core::mem::drop(active_task);
-    return ret;
+    ret
 }
 
 /// Look up which syscall to excute and excute it

@@ -224,13 +224,13 @@ impl UART {
     pub fn console() -> Self {
         let mut uart = Self::new(UARTLine::Console);
         uart.init();
-        return uart;
+        uart
     }
 
     pub fn train() -> Self {
         let mut uart = Self::new(UARTLine::Marklin);
         uart.init();
-        return uart;
+        uart
     }
 
     fn init(&mut self) {

@@ -152,9 +152,9 @@ impl Scheduler {
         };
 
         if self.push(task).is_ok() {
-            return *num as i8;
+            *num as i8
         } else {
-            return OUT_OF_DESCRIPTORS;
+            OUT_OF_DESCRIPTORS
         }
     }
 
@@ -186,26 +186,23 @@ impl Scheduler {
             *active_task = Some(task);
             core::mem::drop(active_task);
             __syscall_ret();
-        } else {
-            let task_starting_sp = task.starting_sp;
-            el0_setup(task.fn_ptr as u64, task_starting_sp);
-            if task.context.is_none() {
-                let context = Context::new();
-                task.context = Some(context);
-            }
-            let mut active_task = self.active_task.lock();
-            *active_task = Some(task);
-            let active_task_context =
-                active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
-            let mut cpu_context = CPU_GLOBAL.context.lock();
-            let cpu_context_ptr = &mut *cpu_context as *mut Context;
-            core::mem::drop(active_task);
-            core::mem::drop(cpu_context);
-            __switch_to_task(cpu_context_ptr, active_task_context);
-
-            // syscall returns to here
-            self.reschedule();
         }
+        let task_starting_sp = task.starting_sp;
+        el0_setup(task.fn_ptr as u64, task_starting_sp);
+        if task.context.is_none() {
+            let context = Context::new();
+            task.context = Some(context);
+        }
+        let mut active_task = self.active_task.lock();
+        *active_task = Some(task);
+        let active_task_context =
+            active_task.as_mut().unwrap().context.as_mut().unwrap() as *mut Context;
+        let mut cpu_context = CPU_GLOBAL.context.lock();
+        let cpu_context_ptr = &mut *cpu_context as *mut Context;
+        core::mem::drop(active_task);
+        core::mem::drop(cpu_context);
+        __switch_to_task(cpu_context_ptr, active_task_context);
+        self.reschedule();
     }
 
     pub fn reschedule(&self) {
