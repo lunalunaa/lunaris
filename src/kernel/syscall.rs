@@ -1,6 +1,6 @@
 use core::arch::asm;
 
-use super::boot::wait_forever;
+use crate::kernel::boot::wait_forever;
 
 pub const EXCEPTION_CODE_CREATE: u64 = 1;
 pub const EXCEPTION_CODE_MY_TID: u64 = 2;

@@ -1,4 +1,4 @@
-use super::tasks::CPU_GLOBAL;
+use crate::kernel::tasks::CPU_GLOBAL;
 use crate::user::main;
 use aarch64_cpu::{
     asm,

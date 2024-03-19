@@ -1,4 +1,4 @@
-use super::{
+use crate::kernel::{
     syscall::{
         EXCEPTION_CODE_CREATE, EXCEPTION_CODE_EXIT, EXCEPTION_CODE_MY_PARENT_TID,
         EXCEPTION_CODE_MY_TID, EXCEPTION_CODE_YIELD,

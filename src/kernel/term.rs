@@ -1,6 +1,6 @@
 use core::{cell::RefCell, fmt, ops::Deref, panic::PanicInfo};
 
-use super::setup::UART;
+use crate::kernel::setup::UART;
 use heapless::String;
 use numtoa::NumToA;
 use once_cell::unsync::Lazy;
