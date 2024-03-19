@@ -178,6 +178,7 @@ impl Scheduler {
             return;
         }
 
+        // if there is trap fram then resume execution
         if task.trap_frame.is_some() {
             let frame_ptr = task.trap_frame.unwrap();
             let frame = &*frame_ptr;
@@ -187,6 +188,8 @@ impl Scheduler {
             core::mem::drop(active_task);
             __syscall_ret();
         }
+
+        // setup sp when returning
         let task_starting_sp = task.starting_sp;
         el0_setup(task.fn_ptr as u64, task_starting_sp);
         if task.context.is_none() {
