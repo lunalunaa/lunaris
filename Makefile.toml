@@ -1,42 +1,34 @@
 [env]
 RUSTFLAGS_LAB = "-C target-cpu=cortex-a72 -C link-arg=--script=linker.ld"
 RUSTFLAGS_QEMU = "-C target-cpu=cortex-a53 -C link-arg=--script=linker.ld"
+DEBUG_PATH = "target/aarch64-unknown-none/debug/lunaris"
+RELEASE_PATH = "target/aarch64-unknown-none/release/lunaris"
+QEMU_ARGS = "-M raspi3b -m 1024 -serial mon:stdio -nographic"
+QEMU_IMAGE_PATH = "-kernel kernel.img"
 
 [tasks.image-debug]
+env = { "TARGET_PATH" = "${DEBUG_PATH}" }
 dependencies = ["build-debug"]
-run_task = "copy-obj-debug"
+run_task = "copy-obj"
 
 [tasks.image-release]
+env = { "TARGET_PATH" = "${RELEASE_PATH}" }
 dependencies = ["build-release"]
-run_task = "copy-obj-release"
+run_task = "copy-obj"
 
-[tasks.copy-obj-debug]
+[tasks.copy-obj]
 command = "rust-objcopy"
-args = [
-    "--strip-all",
-    "-O",
-    "binary",
-    "target/aarch64-unknown-none/debug/lunaris",
-    "kernel.img",
-]
-
-[tasks.copy-obj-release]
-command = "rust-objcopy"
-args = [
-    "--strip-all",
-    "-O",
-    "binary",
-    "target/aarch64-unknown-none/release/lunaris",
-    "kernel.img",
-]
+args = ["--strip-all", "-O", "binary", "${TARGET_PATH}", "kernel.img"]
 
 [tasks.image-lab-debug]
+env = { "TARGET_PATH" = "${DEBUG_PATH}" }
 dependencies = ["build-lab-debug"]
-run_task = "copy-obj-debug"
+run_task = "copy-obj"
 
 [tasks.image-lab-release]
+env = { "TARGET_PATH" = "${RELEASE_PATH}" }
 dependencies = ["build-lab-release"]
-run_task = "copy-obj-release"
+run_task = "copy-obj"
 
 [tasks.build-debug]
 env = { "RUSTFLAGS" = "${RUSTFLAGS_QEMU}" }
@@ -58,60 +50,24 @@ env = { "RUSTFLAGS" = "${RUSTFLAGS_LAB}" }
 command = "cargo"
 args = ["build", "--release", "--features", "lab", "--no-default-features"]
 
-[tasks.qemu]
+[tasks.qemu-debug]
 command = "qemu-system-aarch64"
-args = [
-    "-M",
-    "raspi3b",
-    "-m",
-    "1024",
-    "-serial",
-    "mon:stdio",
-    "-nographic",
-    "-kernel",
-    "kernel.img",
-]
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_IMAGE_PATH, )"]
 dependencies = ["image-debug"]
 
-[tasks.qemu-debug]
-alias = "qemu"
-
 [tasks.qemu-release]
-extend = "qemu"
+command = "qemu-system-aarch64"
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_IMAGE_PATH, )"]
 dependencies = ["image-release"]
 
 [tasks.qemu-elf-debug]
 command = "qemu-system-aarch64"
-args = [
-    "-M",
-    "raspi3b",
-    "-m",
-    "1024",
-    "-serial",
-    "mon:stdio",
-    "-nographic",
-    "-kernel",
-    "target/aarch64-unknown-none/debug/lunaris",
-    "-d",
-    "int",
-]
+args = ["@@split(QEMU_ARGS, )", "-kernel", "${DEBUG_PATH}", "-d", "int"]
 dependencies = ["build-debug"]
 
 [tasks.qemu-elf-release]
 command = "qemu-system-aarch64"
-args = [
-    "-M",
-    "raspi3b",
-    "-m",
-    "1024",
-    "-serial",
-    "mon:stdio",
-    "-nographic",
-    "-kernel",
-    "target/aarch64-unknown-none/release/lunaris",
-    "-d",
-    "int",
-]
+args = ["@@split(QEMU_ARGS, )", "-kernel", "${RELEASE_PATH}", "-d", "int"]
 dependencies = ["build-release"]
 
 [tasks.qemu-gdb-debug]
@@ -119,45 +75,33 @@ command = "qemu-system-aarch64"
 args = [
     "-S",
     "-s",
-    "-M",
-    "raspi3b",
-    "-m",
-    "1024",
-    "-serial",
-    "mon:stdio",
-    "-nographic",
+    "@@split(QEMU_ARGS, )",
     "-kernel",
-    "target/aarch64-unknown-none/debug/lunaris",
+    "${DEBUG_PATH}",
     "-d",
     "int",
 ]
 dependencies = ["build-debug"]
 
 [tasks.qemu-gdb-release]
-command = "qemu-system-aarch64"
 args = [
     "-S",
     "-s",
-    "-M",
-    "raspi3b",
-    "-m",
-    "1024",
-    "-serial",
-    "mon:stdio",
-    "-nographic",
+    "@@split(QEMU_ARGS, )",
     "-kernel",
-    "target/aarch64-unknown-none/release/lunaris",
+    "${RELEASE_PATH",
     "-d",
     "int",
 ]
+command = "qemu-system-aarch64"
 dependencies = ["build-release"]
 
 [tasks.dump-debug]
 command = "rust-objdump"
-args = ["-d", "target/aarch64-unknown-none/debug/lunaris"]
+args = ["-d", "${DEBUG_PATH"]
 dependencies = ["image-debug"]
 
 [tasks.dump-release]
 command = "rust-objdump"
-args = ["-d", "target/aarch64-unknown-none/release/lunaris"]
+args = ["-d", "${RELEASE_PATH"]
 dependencies = ["image-release"]
