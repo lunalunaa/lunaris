@@ -1,7 +1,8 @@
 # Lunaris: a real-time operating system targeting Raspberry pi for controlling MARKLIN train set
 
 ## Roadmap
-- [x] add context switch and scheduling
+
+- [ ] bugfix: save vector registers
 - [ ] add a better looking terminal
 - [ ] add memory mapping support
 - [ ] add message passing support
