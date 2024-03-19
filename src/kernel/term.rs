@@ -4,7 +4,10 @@ use crate::kernel::setup::UART;
 use heapless::String;
 use numtoa::NumToA;
 use once_cell::unsync::Lazy;
-use ringbuf::{ring_buffer::RbBase, Rb, StaticRb};
+use ringbuf::{
+    traits::{Consumer as _, Observer as _, Producer as _},
+    StaticRb,
+};
 
 const BUFFER_SIZE: usize = 2048;
 const BUFFER_FLUSH_SIZE: usize = 256;
@@ -33,13 +36,19 @@ pub struct Term {
 
 impl Term {
     pub fn init() -> Self {
-        Self {
+        let mut term = Self {
             uart: UART::console(),
             buffer: StaticRb::default(),
             width: WINDOW_WIDTH,
             height: WINDOW_HEIGHT,
             cursor: Cursor::new(0, 0),
-        }
+        };
+        term.set_lf();
+        term
+    }
+
+    fn set_lf(&mut self) {
+        self.put_command(b"[20h");
     }
 
     pub fn flush_all(&mut self) {
@@ -54,7 +63,7 @@ impl Term {
 
         // flush as much as possible
         while !self.uart.rxwaiting() {
-            self.uart.putc_nowait(self.buffer.pop().unwrap());
+            self.uart.putc_nowait(self.buffer.try_pop().unwrap());
         }
     }
 
@@ -76,16 +85,21 @@ impl Term {
         self.put_ch(b'\x1b');
     }
 
+    fn put_command(&mut self, command: &[u8]) {
+        self.put_escape();
+        self.put_slice(command);
+    }
+
     #[inline(always)]
     fn put_unchecked(&mut self, ch: u8) {
-        self.buffer.push(ch).unwrap();
+        self.buffer.try_push(ch).unwrap();
     }
 
     fn put_ch(&mut self, ch: u8) {
         if self.buffer.is_full() {
             self.flush(BUFFER_FLUSH_SIZE);
             self.put_unchecked(ch);
-        } else if self.buffer.free_len() == 1 {
+        } else if self.buffer.vacant_len() == 1 {
             self.put_unchecked(ch);
             self.flush(BUFFER_FLUSH_SIZE);
         } else {
@@ -94,14 +108,14 @@ impl Term {
     }
 
     pub fn put_slice(&mut self, str: &[u8]) {
-        if self.buffer.free_len() == str.len() {
+        if self.buffer.vacant_len() == str.len() {
             self.buffer.push_slice(str);
             self.flush(BUFFER_FLUSH_SIZE);
         } else {
-            while self.buffer.free_len() < str.len() {
+            while self.buffer.vacant_len() < str.len() {
                 self.flush(BUFFER_FLUSH_SIZE);
             }
-            self.buffer.push_slice(str)
+            self.buffer.push_slice(str);
         }
     }
 
@@ -175,6 +189,7 @@ macro_rules! println {
     ($($arg:tt)*) => {{
             use core::fmt::Write;
             let _ = writeln!($crate::kernel::term::TERM_GLOBAL.borrow_mut(), $($arg)*);
+            let _ = write!($crate::kernel::term::TERM_GLOBAL.borrow_mut(), "\r");
     }};
 }
 
