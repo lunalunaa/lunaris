@@ -3,7 +3,7 @@ RUSTFLAGS_LAB = "-C target-cpu=cortex-a72 -C link-arg=--script=linker.ld"
 RUSTFLAGS_QEMU = "-C target-cpu=cortex-a53 -C link-arg=--script=linker.ld"
 DEBUG_PATH = "target/aarch64-unknown-none/debug/lunaris"
 RELEASE_PATH = "target/aarch64-unknown-none/release/lunaris"
-QEMU_ARGS = "-M raspi3b -m 1024 -serial /dev/ttyw0 -monitor stdio -nographic"
+QEMU_ARGS = "-M raspi3b -m 1024 -serial mon:stdio -nographic"
 QEMU_IMAGE_PATH = "-kernel kernel.img"
 
 [tasks.image-debug]

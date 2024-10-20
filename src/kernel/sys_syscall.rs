@@ -82,7 +82,7 @@ unsafe fn kexit(task: &mut Task) -> i8 {
     task.run_state = TaskRunState::Exited;
 
     let mut cpu_context = CPU_GLOBAL.context.lock();
-    let cpu_context_ptr = &mut *cpu_context as *mut Context;
+    let cpu_context_ptr = &raw mut *cpu_context as *mut Context;
     core::mem::drop(cpu_context);
 
     // this is locked in syscall
